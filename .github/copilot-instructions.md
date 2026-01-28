@@ -8,6 +8,7 @@
 - .NET 10.0.2
 - BlazorWebAssembly 10.0.2
 - Bootstrap v5.3.3
+- supabase-csharp 0.16.2
 
 ## Project Structure
 
