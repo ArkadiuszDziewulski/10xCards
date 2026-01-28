@@ -1,65 +1,63 @@
-# API Endpoint Implementation Plan: POST /functions/v1/generate-flashcards
+# API Endpoint Implementation Plan: GET /rest/v1/decks
 
 ## 1. Przegl¹d punktu koñcowego
-Endpoint orkiestruje generowanie fiszek przez us³ugê AI (OpenRouter) na podstawie tekstu wejœciowego u¿ytkownika. Waliduje dane wejœciowe, wysy³a ¿¹danie do modelu, parsuje odpowiedŸ, zapisuje zdarzenie w `public.generation_events` i zwraca listê propozycji fiszek.
+Endpoint zwraca listê zestawów (decks) nale¿¹cych do zalogowanego u¿ytkownika. Dane s¹ pobierane z tabeli `public.decks` przez Supabase REST, z sortowaniem po `created_at` malej¹co.
 
 ## 2. Szczegó³y ¿¹dania
-- Metoda HTTP: `POST`
-- Struktura URL: `/functions/v1/generate-flashcards`
+- Metoda HTTP: `GET`
+- Struktura URL: `/rest/v1/decks`
 - Parametry:
-  - Wymagane: brak (brak query string)
-  - Opcjonalne: brak
-- Nag³ówki:
-  - `Authorization: Bearer <user_token>`
-  - `Content-Type: application/json`
-- Request Body:
-  - `text` (string, wymagany) — d³ugoœæ od 1000 do 10000 znaków.
-  - `amount` (number, wymagany) — liczba fiszek do wygenerowania.
+  - Wymagane: brak (autoryzacja wynika z tokenu u¿ytkownika)
+  - Opcjonalne:
+    - `select` (np. `*`)
+    - `order` (np. `created_at.desc`)
+- Request Body: brak
 
 ## 3. Wykorzystywane typy
-- `GenerateFlashcardsRequest` (C#) jako model wejœciowy.
-- `GenerateFlashcardsResponse` (C#) jako model odpowiedzi.
-- `GeneratedFlashcardDto` (C#) jako element listy `flashcards`.
-- `GenerationEventDto` (C#) jako reprezentacja wpisu w `public.generation_events`.
+- DTO:
+  - `DeckDto` (odpowiednik wiersza `public.decks` dla odpowiedzi API)
+    - `id: string`
+    - `user_id: string`
+    - `name: string`
+    - `created_at: string`
+    - `updated_at: string`
+- Command modele: brak (GET bez body)
 
-## 4. Szczegó³y odpowiedzi
-- `201 Created`: zwraca obiekt z `success`, `flashcards` i `generationId`.
-- `400 Bad Request`: tekst za krótki lub za d³ugi, brak wymaganych pól.
-- `401 Unauthorized`: brak lub nieprawid³owy token.
-- `500 Internal Server Error`: b³¹d komunikacji z OpenRouter lub b³¹d parsowania.
+## 3. Szczegó³y odpowiedzi
+- Sukces:
+  - `200 OK`
+  - Body: `DeckDto[]`
+- B³êdy:
+  - `401 Unauthorized` – brak lub nieprawid³owy token
+  - `500 Internal Server Error` – b³¹d po stronie serwera lub Supabase
 
-## 5. Przep³yw danych
-1. Klient Blazor wysy³a ¿¹danie do Edge Function z tokenem u¿ytkownika.
-2. Funkcja weryfikuje token, waliduje `text` i `amount`.
-3. Funkcja wywo³uje OpenRouter z tekstem i iloœci¹ fiszek.
-4. OdpowiedŸ modelu jest parsowana do listy `GeneratedFlashcardDto`.
-5. Funkcja zapisuje rekord w `public.generation_events` (kolumny: `user_id`, `input_length`, `total_generated_count`, opcjonalnie `target_deck_id`).
-6. Funkcja zwraca `GenerateFlashcardsResponse` z `generationId`.
+## 4. Przep³yw danych
+1. Klient Blazor WebAssembly wywo³uje `/rest/v1/decks?select=*&order=created_at.desc`.
+2. Warstwa HTTP dodaje token u¿ytkownika (Supabase Auth) do nag³ówka `Authorization`.
+3. Supabase RLS filtruje rekordy `public.decks` po `user_id` zgodnym z tokenem.
+4. Wynik zwracany jest jako tablica obiektów `DeckDto`.
 
-## 6. Wzglêdy bezpieczeñstwa
-- Wymagane uwierzytelnienie JWT z Supabase Auth (header `Authorization`).
-- Autoryzacja oparta o RLS w `public.generation_events` (`auth.uid() = user_id`).
-- Walidacja d³ugoœci `text` i zakresu `amount` po stronie funkcji.
-- Ochrona przed nadu¿yciem: limit liczby ¿¹dañ na u¿ytkownika (rate limiting w Edge Function) i limity kosztów OpenRouter.
-- Nie zapisywaæ treœci fiszek w `generation_events` (zgodnie ze specyfikacj¹ logów).
+## 5. Wzglêdy bezpieczeñstwa
+- Wymagane uwierzytelnianie przez Supabase Auth (JWT w `Authorization` header).
+- RLS na `public.decks` musi ograniczaæ dostêp do rekordów u¿ytkownika.
+- Brak danych wejœciowych w body minimalizuje ryzyko wstrzykniêæ, ale parametry query powinny byæ walidowane (dozwolony zestaw pól/operacji).
 
-## 7. Obs³uga b³êdów
-- `400`: niespe³nione warunki d³ugoœci tekstu lub brak pól ? komunikat walidacyjny i wczesny zwrot.
-- `401`: brak tokena lub token niewa¿ny ? komunikat o koniecznoœci logowania.
-- `500`: b³¹d OpenRouter, timeout, b³¹d parsowania odpowiedzi ? logowanie szczegó³ów w logach funkcji.
-- Rejestrowanie b³êdów w tabeli: brak dedykowanej tabeli b³êdów; zapisywaæ szczegó³y w logach funkcji i monitoringu Supabase.
+## 6. Obs³uga b³êdów
+- `401 Unauthorized`: brak tokenu lub wygas³y token.
+- `400 Bad Request`: nieprawid³owe wartoœci `select` lub `order` (jeœli walidowane po stronie klienta/serwera poœredniego).
+- `500 Internal Server Error`: b³¹d po stronie Supabase, sieci lub nieoczekiwany wyj¹tek.
+- Rejestrowanie b³êdów:
+  - Jeœli istnieje tabela b³êdów/logów, zapisywaæ kontekst zapytania (user_id, czas, status) bez wra¿liwych danych.
 
-## 8. Rozwa¿ania dotycz¹ce wydajnoœci
-- Utrzymywaæ limit `amount` (np. górny limit po stronie funkcji) w celu ograniczenia kosztów i czasu odpowiedzi.
-- Ustawiæ timeouty dla po³¹czenia z OpenRouter i mechanizm retry z ograniczeniem liczby prób.
-- Rozwa¿yæ cache'owanie wyników dla identycznych zapytañ w przysz³oœci (opcjonalnie).
+## 7. Rozwa¿ania dotycz¹ce wydajnoœci
+- U¿ywaæ `select=*` tylko, jeœli wszystkie pola s¹ potrzebne; w innym wypadku wybieraæ konkretne kolumny.
+- Indeks na `created_at` i filtr RLS po `user_id` s¹ kluczowe dla szybkich zapytañ.
+- Cache po stronie klienta (np. pamiêæ podrêczna w stanie aplikacji) dla listy zestawów.
 
-## 9. Etapy wdro¿enia
-1. Zdefiniowaæ kontrakt wejœcia/wyjœcia dla Edge Function zgodny z `GenerateFlashcardsRequest` i `GenerateFlashcardsResponse`.
-2. Zaimplementowaæ walidacjê `text` (1000-10000 znaków) oraz `amount` z guard clauses i wczesnym zwrotem `400`.
-3. Dodaæ klienta OpenRouter oraz logikê parsowania odpowiedzi do listy `GeneratedFlashcardDto`.
-4. Zaimplementowaæ zapis do `public.generation_events` z `user_id`, `input_length`, `total_generated_count` i `target_deck_id` (jeœli dostêpny).
-5. Obs³u¿yæ b³êdy komunikacji z OpenRouter i b³êdy parsowania, mapuj¹c je na `500`.
-6. Zwróciæ odpowiedŸ `201` z `generationId` i list¹ fiszek.
-7. Dodaæ wywo³anie w serwisie Blazor odpowiedzialnym za AI oraz mapowanie na `GenerateFlashcardsResponse`.
-8. Zweryfikowaæ dzia³anie end-to-end z poprawnym tokenem u¿ytkownika i walidacj¹ RLS.
+## 8. Etapy wdro¿enia
+1. Zweryfikowaæ RLS na `public.decks` dla odczytu tylko w³asnych rekordów.
+2. Zdefiniowaæ `DeckDto` w warstwie modeli frontendu (Blazor WASM) zgodnie z typami z `Model.types.ts`.
+3. Dodaæ serwis API w Blazor (np. `DecksApiClient`) wykonuj¹cy `GET /rest/v1/decks` z parametrami `select` i `order`.
+4. Zaimplementowaæ obs³ugê b³êdów HTTP (401/400/500) i komunikaty dla u¿ytkownika.
+5. Dodaæ testy integracyjne lub e2e (jeœli dostêpne) weryfikuj¹ce poprawne filtrowanie po u¿ytkowniku.
+6. Uzupe³niæ dokumentacjê w `/docs` oraz `README.md` o nowy endpoint i zasady u¿ycia.
