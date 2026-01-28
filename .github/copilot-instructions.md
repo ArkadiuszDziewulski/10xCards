@@ -16,7 +16,9 @@ When introducing changes to the project, always follow the directory structure b
 
 - `./Pages` - Blazor pages
 - `./Layout` - Blazor layouts
-
+- `./Components` - Reusable Blazor components
+- `./Models` - Data Models
+- 
 When modifying the directory structure, always update this section.
 
 ## Coding practices
