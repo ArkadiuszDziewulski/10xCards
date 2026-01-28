@@ -7,7 +7,7 @@ namespace _10xCards.Models;
 public class Profile : BaseModel
 {
     [PrimaryKey("id", false)]
-    public string Id { get; set; } = null!;
+    public Guid Id { get; set; }
 
     [Column("created_at")]
     public DateTime CreatedAt { get; set; }

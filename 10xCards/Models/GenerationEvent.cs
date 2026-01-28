@@ -7,13 +7,13 @@ namespace _10xCards.Models;
 public class GenerationEvent : BaseModel
 {
     [PrimaryKey("id", false)]
-    public string Id { get; set; } = null!;
+    public Guid Id { get; set; }
 
     [Column("user_id")]
-    public string UserId { get; set; } = null!;
+    public Guid UserId { get; set; }
 
     [Column("target_deck_id")]
-    public string? TargetDeckId { get; set; }
+    public Guid? TargetDeckId { get; set; }
 
     [Column("input_length")]
     public int InputLength { get; set; }

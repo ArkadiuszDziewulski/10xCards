@@ -7,25 +7,25 @@ namespace _10xCards.Models;
 public class Flashcard : BaseModel
 {
     [PrimaryKey("id", false)]
-    public string Id { get; set; } = null!;
+    public Guid Id { get; set; }
 
     [Column("front")]
-    public string Front { get; set; } = null!;
+    public string Front { get; set; } = string.Empty;
 
     [Column("back")]
-    public string Back { get; set; } = null!;
+    public string Back { get; set; } = string.Empty;
 
     [Column("deck_id")]
-    public string DeckId { get; set; } = null!;
+    public Guid DeckId { get; set; }
 
     [Column("user_id")]
-    public string UserId { get; set; } = null!;
+    public Guid UserId { get; set; }
 
     [Column("status")]
     public string Status { get; set; } = "new";
 
     [Column("ease_factor")]
-    public float EaseFactor { get; set; }
+    public double EaseFactor { get; set; }
 
     [Column("interval")]
     public int Interval { get; set; }
