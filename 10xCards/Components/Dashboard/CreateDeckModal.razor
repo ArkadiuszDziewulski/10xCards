@@ -1,0 +1,68 @@
+@using _10xCards.Models
+
+@if (IsVisible)
+{
+    <div class="modal fade show d-block" tabindex="-1" role="dialog" aria-modal="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <EditForm Model="formModel" OnValidSubmit="HandleValidSubmit">
+                    <DataAnnotationsValidator />
+                    <div class="modal-header">
+                        <h5 class="modal-title">Nowy zestaw</h5>
+                        <button type="button" class="btn-close" aria-label="Zamknij" @onclick="HandleClose"></button>
+                    </div>
+                    <div class="modal-body">
+                        @if (!string.IsNullOrWhiteSpace(ErrorMessage))
+                        {
+                            <div class="alert alert-danger">
+                                @ErrorMessage
+                            </div>
+                        }
+                        <div class="mb-3">
+                            <label class="form-label" for="deckName">Nazwa zestawu</label>
+                            <InputText id="deckName" class="form-control" @bind-Value="formModel.Name" />
+                            <ValidationMessage For="() => formModel.Name" />
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" @onclick="HandleClose">Anuluj</button>
+                        <button type="submit" class="btn btn-primary">Utwórz</button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop fade show"></div>
+}
+
+@code {
+    private CreateDeckFormModel formModel = new();
+
+    [Parameter]
+    public bool IsVisible { get; set; }
+
+    [Parameter]
+    public EventCallback OnClose { get; set; }
+
+    [Parameter]
+    public EventCallback<CreateDeckFormModel> OnSubmit { get; set; }
+
+    [Parameter]
+    public string? ErrorMessage { get; set; }
+
+    private async Task HandleValidSubmit()
+    {
+        if (!OnSubmit.HasDelegate)
+        {
+            return;
+        }
+
+        await OnSubmit.InvokeAsync(formModel);
+    }
+
+    private async Task HandleClose()
+    {
+        formModel = new CreateDeckFormModel();
+        await OnClose.InvokeAsync();
+    }
+}

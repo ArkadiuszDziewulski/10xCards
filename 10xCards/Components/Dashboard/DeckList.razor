@@ -1,0 +1,18 @@
+@using _10xCards.Models
+
+<div class="row g-3">
+    @foreach (var deck in Decks)
+    {
+        <div class="col-12 col-md-6 col-lg-4">
+            <DeckCard Deck="deck" OnDelete="OnDeleteClick" />
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public IReadOnlyList<DeckViewModel> Decks { get; set; } = Array.Empty<DeckViewModel>();
+
+    [Parameter]
+    public EventCallback<Guid> OnDeleteClick { get; set; }
+}

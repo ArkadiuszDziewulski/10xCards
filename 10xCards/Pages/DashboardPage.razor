@@ -1,0 +1,245 @@
+@page "/"
+@page "/decks"
+@attribute [Authorize]
+@using Microsoft.AspNetCore.Authorization
+@using _10xCards.Components.Dashboard
+@using _10xCards.Models
+@using _10xCards.Services
+@inject DecksApiClient DecksApiClient
+@inject Supabase.Client SupabaseClient
+@inject NavigationManager NavigationManager
+
+<PageTitle>Moje zestawy</PageTitle>
+
+<h1 class="mb-4">Moje zestawy</h1>
+
+<button class="btn btn-primary mb-4" @onclick="ShowCreateDeckModal">Dodaj nowy zestaw</button>
+
+@if (isLoading)
+{
+    <div class="d-flex justify-content-center py-5">
+        <div class="spinner-border" role="status">
+            <span class="visually-hidden">£adowanie...</span>
+        </div>
+    </div>
+}
+else if (!string.IsNullOrWhiteSpace(errorMessage))
+{
+    <div class="alert alert-danger">
+        @errorMessage
+    </div>
+}
+else if (decks.Count == 0)
+{
+    <div class="alert alert-info">
+        Brak zestawów. Utwórz pierwszy zestaw, aby rozpocz¹æ naukê.
+    </div>
+}
+else
+{
+    <DeckList Decks="decks" OnDeleteClick="HandleDeleteClick" />
+}
+
+<CreateDeckModal IsVisible="showCreateModal"
+                 OnClose="HandleCreateModalClose"
+                 OnSubmit="HandleCreateDeck"
+                 ErrorMessage="createErrorMessage" />
+
+<DeleteConfirmationModal IsVisible="showDeleteModal"
+                         Title="Usuñ zestaw"
+                         Message="Czy na pewno chcesz usun¹æ ten zestaw?"
+                         OnCancel="HandleDeleteCanceled"
+                         OnConfirm="HandleDeleteConfirmed" />
+
+@code {
+    private readonly List<DeckViewModel> decks = new();
+    private bool isLoading;
+    private string? errorMessage;
+    private bool showCreateModal;
+    private bool showDeleteModal;
+    private DeckViewModel? deckToDelete;
+    private string? createErrorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDecksAsync();
+    }
+
+    private void ShowCreateDeckModal()
+    {
+        createErrorMessage = null;
+        showCreateModal = true;
+    }
+
+    private async Task HandleCreateModalClose()
+    {
+        createErrorMessage = null;
+        showCreateModal = false;
+        await Task.CompletedTask;
+    }
+
+    private async Task LoadDecksAsync()
+    {
+        errorMessage = null;
+        isLoading = true;
+        decks.Clear();
+
+        var accessToken = GetAccessToken();
+        if (string.IsNullOrWhiteSpace(accessToken))
+        {
+            errorMessage = "Brak aktywnej sesji. Zaloguj siê, aby zobaczyæ swoje zestawy.";
+            isLoading = false;
+            return;
+        }
+
+        try
+        {
+            var deckDtos = await DecksApiClient.GetDecksAsync(accessToken);
+            decks.AddRange(deckDtos.Select(MapToViewModel));
+        }
+        catch (DecksApiException exception)
+        {
+            errorMessage = GetDecksErrorMessage(exception);
+        }
+        catch (Exception exception)
+        {
+            errorMessage = $"Nieoczekiwany b³¹d: {exception.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task HandleCreateDeck(CreateDeckFormModel formModel)
+    {
+        createErrorMessage = null;
+        errorMessage = null;
+
+        var accessToken = GetAccessToken();
+        if (string.IsNullOrWhiteSpace(accessToken))
+        {
+            createErrorMessage = "Brak aktywnej sesji. Zaloguj siê, aby utworzyæ zestaw.";
+            return;
+        }
+
+        try
+        {
+            var createdDeck = await DecksApiClient.CreateDeckAsync(
+                accessToken,
+                new CreateDeckRequest { Name = formModel.Name });
+
+            decks.Insert(0, MapToViewModel(createdDeck));
+            showCreateModal = false;
+        }
+        catch (DecksApiException exception)
+        {
+            createErrorMessage = GetCreateErrorMessage(exception);
+        }
+        catch (Exception exception)
+        {
+            createErrorMessage = $"Nieoczekiwany b³¹d: {exception.Message}";
+        }
+    }
+
+    private void HandleDeleteClick(Guid deckId)
+    {
+        deckToDelete = decks.FirstOrDefault(deck => deck.Id == deckId);
+        if (deckToDelete is null)
+        {
+            return;
+        }
+
+        showDeleteModal = true;
+    }
+
+    private async Task HandleDeleteCanceled()
+    {
+        showDeleteModal = false;
+        deckToDelete = null;
+        await Task.CompletedTask;
+    }
+
+    private async Task HandleDeleteConfirmed()
+    {
+        if (deckToDelete is null)
+        {
+            showDeleteModal = false;
+            return;
+        }
+
+        errorMessage = null;
+        var accessToken = GetAccessToken();
+        if (string.IsNullOrWhiteSpace(accessToken))
+        {
+            errorMessage = "Brak aktywnej sesji. Zaloguj siê, aby usun¹æ zestaw.";
+            showDeleteModal = false;
+            deckToDelete = null;
+            return;
+        }
+
+        try
+        {
+            await DecksApiClient.DeleteDeckAsync(accessToken, deckToDelete.Id);
+            decks.RemoveAll(deck => deck.Id == deckToDelete.Id);
+        }
+        catch (DecksApiException exception)
+        {
+            errorMessage = GetDeleteErrorMessage(exception);
+        }
+        catch (Exception exception)
+        {
+            errorMessage = $"Nieoczekiwany b³¹d: {exception.Message}";
+        }
+        finally
+        {
+            showDeleteModal = false;
+            deckToDelete = null;
+        }
+    }
+
+    private static DeckViewModel MapToViewModel(DeckDto deckDto)
+    {
+        return new DeckViewModel
+        {
+            Id = deckDto.Id,
+            Name = deckDto.Name,
+            CreatedAt = deckDto.CreatedAt,
+        };
+    }
+
+    private string? GetAccessToken()
+    {
+        return SupabaseClient.Auth.CurrentSession?.AccessToken;
+    }
+
+    private static string GetDecksErrorMessage(DecksApiException exception)
+    {
+        return exception.StatusCode switch
+        {
+            System.Net.HttpStatusCode.Unauthorized => "Brak dostêpu do zestawów.",
+            System.Net.HttpStatusCode.Forbidden => "Nie masz uprawnieñ do zestawów.",
+            _ => exception.Message,
+        };
+    }
+
+    private static string GetCreateErrorMessage(DecksApiException exception)
+    {
+        return exception.StatusCode switch
+        {
+            System.Net.HttpStatusCode.Conflict => "Zestaw o tej nazwie ju¿ istnieje.",
+            System.Net.HttpStatusCode.BadRequest => "Nieprawid³owe dane zestawu.",
+            _ => exception.Message,
+        };
+    }
+
+    private static string GetDeleteErrorMessage(DecksApiException exception)
+    {
+        return exception.StatusCode switch
+        {
+            System.Net.HttpStatusCode.BadRequest => "Nieprawid³owy identyfikator zestawu.",
+            System.Net.HttpStatusCode.NotFound => "Zestaw nie zosta³ znaleziony.",
+            _ => exception.Message,
+        };
+    }
+}

@@ -1,0 +1,20 @@
+@using _10xCards.Models
+
+<div class="card h-100">
+    <div class="card-body d-flex flex-column">
+        <h5 class="card-title">@Deck.Name</h5>
+        <div class="mt-auto d-flex flex-wrap gap-2">
+            <a class="btn btn-primary btn-sm" href="@Deck.StudyUrl">Ucz siê</a>
+            <a class="btn btn-outline-secondary btn-sm" href="@Deck.EditUrl">Edytuj</a>
+            <button class="btn btn-outline-danger btn-sm" type="button" @onclick="() => OnDelete.InvokeAsync(Deck.Id)">Usuñ</button>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public DeckViewModel Deck { get; set; } = default!;
+
+    [Parameter]
+    public EventCallback<Guid> OnDelete { get; set; }
+}
