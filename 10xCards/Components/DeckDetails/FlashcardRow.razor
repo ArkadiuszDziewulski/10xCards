@@ -1,0 +1,26 @@
+@using _10xCards.Models
+
+<tr>
+    <td>@Item.Front</td>
+    <td>@Item.Back</td>
+    <td>
+        <span class="badge bg-secondary text-uppercase">@Item.Status</span>
+    </td>
+    <td class="text-end">
+        <div class="btn-group btn-group-sm" role="group">
+            <button class="btn btn-outline-secondary" type="button" @onclick="() => OnEditRequested.InvokeAsync(Item)">Edytuj</button>
+            <button class="btn btn-outline-danger" type="button" @onclick="() => OnDeleteRequested.InvokeAsync(Item)">Usuñ</button>
+        </div>
+    </td>
+</tr>
+
+@code {
+    [Parameter, EditorRequired]
+    public FlashcardViewModel Item { get; set; } = default!;
+
+    [Parameter]
+    public EventCallback<FlashcardViewModel> OnEditRequested { get; set; }
+
+    [Parameter]
+    public EventCallback<FlashcardViewModel> OnDeleteRequested { get; set; }
+}

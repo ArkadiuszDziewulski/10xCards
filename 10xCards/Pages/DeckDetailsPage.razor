@@ -1,0 +1,79 @@
+@page "/decks/{DeckId:guid}"
+@attribute [Authorize]
+@using Microsoft.AspNetCore.Authorization
+@using _10xCards.Components.DeckDetails
+@using _10xCards.Components.Shared
+@using _10xCards.Models
+
+<PageTitle>Szczegó³y zestawu</PageTitle>
+
+<DeckHeader DeckName="@deckName" OnCreateRequested="ShowCreateModal" />
+
+@if (isLoading)
+{
+    <div class="d-flex justify-content-center py-5">
+        <div class="spinner-border" role="status">
+            <span class="visually-hidden">£adowanie...</span>
+        </div>
+    </div>
+}
+else if (!string.IsNullOrWhiteSpace(errorMessage))
+{
+    <div class="alert alert-danger">
+        @errorMessage
+    </div>
+}
+else if (flashcards.Count == 0)
+{
+    <div class="alert alert-info">
+        Brak fiszek w tym zestawie. Dodaj pierwsz¹ fiszkê, aby rozpocz¹æ naukê.
+    </div>
+}
+else
+{
+    <FlashcardTable Items="PagedFlashcards"
+                    Pagination="pagination"
+                    OnEditRequested="HandleEditRequested"
+                    OnDeleteRequested="HandleDeleteRequested"
+                    OnPageChanged="HandlePageChanged" />
+}
+
+@code {
+    [Parameter]
+    public Guid DeckId { get; set; }
+
+    private string deckName = "";
+    private bool isLoading = true;
+    private string? errorMessage;
+    private readonly List<FlashcardViewModel> flashcards = new();
+    private PaginationState pagination = new() { PageSize = 10, CurrentPage = 1, TotalItems = 0 };
+
+    private IReadOnlyList<FlashcardViewModel> PagedFlashcards => flashcards;
+
+    private async Task ShowCreateModal()
+    {
+        await Task.CompletedTask;
+    }
+
+    private async Task HandleEditRequested(FlashcardViewModel flashcard)
+    {
+        await Task.CompletedTask;
+    }
+
+    private async Task HandleDeleteRequested(FlashcardViewModel flashcard)
+    {
+        await Task.CompletedTask;
+    }
+
+    private async Task HandlePageChanged(int page)
+    {
+        pagination = new PaginationState
+        {
+            PageSize = pagination.PageSize,
+            CurrentPage = page,
+            TotalItems = pagination.TotalItems,
+        };
+
+        await Task.CompletedTask;
+    }
+}

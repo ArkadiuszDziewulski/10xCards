@@ -1,0 +1,17 @@
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-4">
+    <div>
+        <h1 class="mb-1">@DeckName</h1>
+        <div class="text-muted">Zarz¹dzaj fiszkami w tym zestawie</div>
+    </div>
+    <button class="btn btn-primary" type="button" @onclick="OnCreateRequested">
+        Dodaj fiszkê
+    </button>
+</div>
+
+@code {
+    [Parameter]
+    public string DeckName { get; set; } = string.Empty;
+
+    [Parameter]
+    public EventCallback OnCreateRequested { get; set; }
+}

@@ -1,0 +1,38 @@
+@using _10xCards.Models
+
+@if (Pagination.TotalPages > 1)
+{
+    <nav class="d-flex justify-content-between align-items-center" aria-label="Paginacja">
+        <button class="btn btn-outline-secondary btn-sm"
+                type="button"
+                disabled="@(Pagination.CurrentPage <= 1)"
+                @onclick="() => ChangePage(Pagination.CurrentPage - 1)">
+            Poprzednia
+        </button>
+        <span class="text-muted">Strona @Pagination.CurrentPage z @Pagination.TotalPages</span>
+        <button class="btn btn-outline-secondary btn-sm"
+                type="button"
+                disabled="@(Pagination.CurrentPage >= Pagination.TotalPages)"
+                @onclick="() => ChangePage(Pagination.CurrentPage + 1)">
+            Nastêpna
+        </button>
+    </nav>
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public PaginationState Pagination { get; set; } = new();
+
+    [Parameter]
+    public EventCallback<int> OnPageChanged { get; set; }
+
+    private async Task ChangePage(int page)
+    {
+        if (!OnPageChanged.HasDelegate)
+        {
+            return;
+        }
+
+        await OnPageChanged.InvokeAsync(page);
+    }
+}

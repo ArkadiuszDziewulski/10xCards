@@ -1,0 +1,42 @@
+@using _10xCards.Models
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th scope="col">Przód</th>
+                    <th scope="col">Ty³</th>
+                    <th scope="col">Status</th>
+                    <th scope="col" class="text-end">Akcje</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var flashcard in Items)
+                {
+                    <FlashcardRow Item="flashcard" OnEditRequested="OnEditRequested" OnDeleteRequested="OnDeleteRequested" />
+                }
+            </tbody>
+        </table>
+    </div>
+    <div class="border-top p-3">
+        <PaginationControls Pagination="Pagination" OnPageChanged="OnPageChanged" />
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public IReadOnlyList<FlashcardViewModel> Items { get; set; } = Array.Empty<FlashcardViewModel>();
+
+    [Parameter, EditorRequired]
+    public PaginationState Pagination { get; set; } = new();
+
+    [Parameter]
+    public EventCallback<FlashcardViewModel> OnEditRequested { get; set; }
+
+    [Parameter]
+    public EventCallback<FlashcardViewModel> OnDeleteRequested { get; set; }
+
+    [Parameter]
+    public EventCallback<int> OnPageChanged { get; set; }
+}
