@@ -17,6 +17,7 @@ builder.Services.AddScoped<SupabaseAuthService>();
 builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
 builder.Services.AddScoped<DecksApiClient>();
 builder.Services.AddScoped<FlashcardsApiClient>();
+builder.Services.AddScoped<OpenRouterService>();
 
 await builder.Build().RunAsync();
 

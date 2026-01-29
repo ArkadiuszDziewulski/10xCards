@@ -55,3 +55,7 @@ Usuwa zestaw fiszek zalogowanego u¿ytkownika. Rekordy fiszek powi¹zane z zestawe
   - `500 Internal Server Error`
 
 Szczegó³y w `docs/decks-delete-endpoint.md`.
+
+## OpenRouter
+
+Konfiguracja i u¿ycie serwisu LLM opisane s¹ w `docs/openrouter-service.md`.

@@ -11,3 +11,6 @@
 - Added `POST /rest/v1/flashcards` support in `FlashcardsApiClient` with validation and error handling.
 - Documented `POST /rest/v1/flashcards` in `docs/flashcards-post.md` and updated `README.md`.
 - Added redirect to `/auth/login` when unauthenticated users access `/` or `/decks`.
+- Added OpenRouter service models, configuration, and HTTP integration.
+- Added OpenRouter test UI section on `Pages/Home.razor`.
+- Documented OpenRouter configuration in `docs/openrouter-service.md` and `docs/rest-api.md`.

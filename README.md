@@ -45,3 +45,9 @@ Endpoint tworzy fiszki (obs³uguje batch insert).
 - OdpowiedŸ: `FlashcardDto[]` lub puste body przy `Prefer: return=minimal`
 
 Wiêcej szczegó³ów w `docs/flashcards-post.md`.
+
+## OpenRouter
+
+Serwis `OpenRouterService` obs³uguje generowanie odpowiedzi LLM. Konfiguracja znajduje siê w `wwwroot/appsettings.json` pod sekcj¹ `openrouter`.
+
+Wiêcej szczegó³ów w `docs/openrouter-service.md`.

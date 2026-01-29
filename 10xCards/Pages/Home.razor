@@ -3,6 +3,7 @@
 @using _10xCards.Services
 @inject DecksApiClient DecksApiClient
 @inject FlashcardsApiClient FlashcardsApiClient
+@inject OpenRouterService OpenRouterService
 
 <PageTitle>Home</PageTitle>
 
@@ -65,6 +66,36 @@
     </ul>
 }
 
+<h2 class="mt-5">OpenRouter test</h2>
+
+<div class="mb-3">
+    <label class="form-label" for="systemMessage">System message</label>
+    <textarea id="systemMessage" class="form-control" rows="2" @bind="openRouterSystemMessage"></textarea>
+</div>
+
+<div class="mb-3">
+    <label class="form-label" for="userMessage">User message</label>
+    <textarea id="userMessage" class="form-control" rows="3" @bind="openRouterUserMessage"></textarea>
+</div>
+
+<button class="btn btn-outline-primary" disabled="@isSendingOpenRouter" @onclick="SendOpenRouterAsync">
+    Send OpenRouter request
+</button>
+
+@if (!string.IsNullOrWhiteSpace(openRouterError))
+{
+    <div class="alert alert-danger mt-3">
+        @openRouterError
+    </div>
+}
+
+@if (!string.IsNullOrWhiteSpace(openRouterResponse))
+{
+    <div class="alert alert-success mt-3">
+        @openRouterResponse
+    </div>
+}
+
 @code {
     private string? accessToken;
     private IReadOnlyList<DeckDto>? decks;
@@ -72,6 +103,11 @@
     private string? errorMessage;
     private readonly HashSet<Guid> deletingDecks = new();
     private readonly HashSet<Guid> loadingFlashcards = new();
+    private string? openRouterSystemMessage;
+    private string? openRouterUserMessage;
+    private string? openRouterResponse;
+    private string? openRouterError;
+    private bool isSendingOpenRouter;
 
     private async Task LoadDecksAsync()
     {
@@ -212,5 +248,43 @@
             System.Net.HttpStatusCode.NotFound => "No flashcards were found for this deck.",
             _ => exception.Message,
         };
+    }
+
+    private async Task SendOpenRouterAsync()
+    {
+        openRouterError = null;
+        openRouterResponse = null;
+
+        if (string.IsNullOrWhiteSpace(openRouterUserMessage))
+        {
+            openRouterError = "User message is required.";
+            return;
+        }
+
+        isSendingOpenRouter = true;
+
+        try
+        {
+            var request = OpenRouterService.BuildRequest(openRouterUserMessage, openRouterSystemMessage);
+            var response = await OpenRouterService.SendChatAsync(request);
+            var firstChoice = response.Choices is { Count: > 0 } ? response.Choices[0] : null;
+            var content = firstChoice?.Message?.Content;
+
+            if (string.IsNullOrWhiteSpace(content))
+            {
+                openRouterError = "OpenRouter returned an empty response.";
+                return;
+            }
+
+            openRouterResponse = content;
+        }
+        catch (Exception exception)
+        {
+            openRouterError = exception.Message;
+        }
+        finally
+        {
+            isSendingOpenRouter = false;
+        }
     }
 }
