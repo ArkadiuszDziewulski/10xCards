@@ -29,3 +29,13 @@ Endpoint usuwa zestaw fiszek zalogowanego u¿ytkownika.
 - OdpowiedŸ: `DeckDeleteResponse`
 
 Wiêcej szczegó³ów w `docs/rest-api.md`, `docs/decks-post-endpoint.md` oraz `docs/decks-delete-endpoint.md`.
+
+### POST /rest/v1/flashcards
+
+Endpoint tworzy fiszki (obs³uguje batch insert).
+
+- Nag³ówek: `Authorization: Bearer <token>`
+- Body: `[{ "deck_id": "...", "front": "...", "back": "...", "status": "active|draft" }]`
+- OdpowiedŸ: `FlashcardDto[]` lub puste body przy `Prefer: return=minimal`
+
+Wiêcej szczegó³ów w `docs/flashcards-post.md`.
