@@ -20,4 +20,12 @@ Endpoint tworzy nowy zestaw dla zalogowanego u¿ytkownika.
 - Body: `{ "name": "..." }`
 - OdpowiedŸ: `DeckDto`
 
-Wiêcej szczegó³ów w `docs/rest-api.md` oraz `docs/decks-post-endpoint.md`.
+### DELETE /rest/v1/decks?id=eq.{uuid}
+
+Endpoint usuwa zestaw fiszek zalogowanego u¿ytkownika.
+
+- Nag³ówek: `Authorization: Bearer <token>`
+- Parametry: `id` (UUID zestawu)
+- OdpowiedŸ: `DeckDeleteResponse`
+
+Wiêcej szczegó³ów w `docs/rest-api.md`, `docs/decks-post-endpoint.md` oraz `docs/decks-delete-endpoint.md`.

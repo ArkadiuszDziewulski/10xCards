@@ -195,6 +195,85 @@ public sealed class DecksApiClient
         return createdDecks[0];
     }
 
+    public async Task<DeckDeleteResponse> DeleteDeckAsync(
+        string accessToken,
+        Guid deckId,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(accessToken))
+        {
+            throw new DecksApiException("Access token is required.", HttpStatusCode.Unauthorized);
+        }
+
+        if (deckId == Guid.Empty)
+        {
+            throw new DecksApiException("Deck id is required.", HttpStatusCode.BadRequest);
+        }
+
+        if (string.IsNullOrWhiteSpace(supabaseUrl))
+        {
+            throw new InvalidOperationException("Supabase Url is not configured.");
+        }
+
+        if (!TryGetUserIdFromAccessToken(accessToken, out var userId))
+        {
+            throw new DecksApiException("Invalid access token.", HttpStatusCode.Unauthorized);
+        }
+
+        var baseUrl = supabaseUrl.TrimEnd('/');
+        var requestUri =
+            $"{baseUrl}/rest/v1/decks?id=eq.{Uri.EscapeDataString(deckId.ToString())}&user_id=eq.{Uri.EscapeDataString(userId.ToString())}";
+
+        using var requestMessage = new HttpRequestMessage(HttpMethod.Delete, requestUri);
+        requestMessage.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+        requestMessage.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+        requestMessage.Headers.TryAddWithoutValidation("Prefer", "return=representation");
+
+        using var response = await httpClient.SendAsync(requestMessage, cancellationToken);
+        if (response.StatusCode == HttpStatusCode.Unauthorized)
+        {
+            throw new DecksApiException("Unauthorized request.", response.StatusCode);
+        }
+
+        if (!response.IsSuccessStatusCode)
+        {
+            var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
+            var message = response.StatusCode switch
+            {
+                HttpStatusCode.BadRequest => "Invalid deck identifier.",
+                HttpStatusCode.Forbidden => "Access to decks is forbidden.",
+                HttpStatusCode.NotFound => "Deck not found.",
+                HttpStatusCode.InternalServerError => "Server error while deleting deck.",
+                _ => "Failed to delete deck.",
+            };
+
+            logger.LogWarning(
+                "Failed to delete deck. Status: {StatusCode}. Response: {Response}",
+                response.StatusCode,
+                errorContent);
+
+            throw new DecksApiException(
+                string.IsNullOrWhiteSpace(errorContent) ? message : $"{message} {errorContent}",
+                response.StatusCode);
+        }
+
+        await using var contentStream = await response.Content.ReadAsStreamAsync(cancellationToken);
+        var deletedDecks = await JsonSerializer.DeserializeAsync<List<DeckDto>>(contentStream, jsonOptions, cancellationToken)
+            ?? new List<DeckDto>();
+
+        if (deletedDecks.Count == 0)
+        {
+            throw new DecksApiException("Deck not found.", HttpStatusCode.NotFound);
+        }
+
+        return new DeckDeleteResponse
+        {
+            Id = deletedDecks[0].Id,
+            Deleted = true,
+            DeletedAt = DateTimeOffset.UtcNow,
+        };
+    }
+
     private static string NormalizeSelect(string? select)
     {
         if (string.IsNullOrWhiteSpace(select))

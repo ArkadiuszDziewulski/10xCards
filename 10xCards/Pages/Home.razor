@@ -28,9 +28,16 @@
     <ul class="list-group mt-3">
         @foreach (var deck in decks)
         {
-            <li class="list-group-item">
-                <strong>@deck.Name</strong>
-                <div class="text-muted">@deck.CreatedAt.ToString("u")</div>
+            <li class="list-group-item d-flex justify-content-between align-items-start">
+                <div>
+                    <strong>@deck.Name</strong>
+                    <div class="text-muted">@deck.CreatedAt.ToString("u")</div>
+                </div>
+                <button class="btn btn-outline-danger btn-sm"
+                        disabled="@IsDeleting(deck.Id)"
+                        @onclick="() => DeleteDeckAsync(deck.Id)">
+                    Delete
+                </button>
             </li>
         }
     </ul>
@@ -40,6 +47,7 @@
     private string? accessToken;
     private IReadOnlyList<DeckDto>? decks;
     private string? errorMessage;
+    private readonly HashSet<Guid> deletingDecks = new();
 
     private async Task LoadDecksAsync()
     {
@@ -58,11 +66,69 @@
         }
         catch (DecksApiException exception)
         {
+            errorMessage = GetDeleteErrorMessage(exception);
+        }
+        catch (Exception exception)
+        {
+            errorMessage = $"Unexpected error: {exception.Message}";
+        }
+    }
+
+    private bool IsDeleting(Guid deckId)
+    {
+        return deletingDecks.Contains(deckId);
+    }
+
+    private async Task DeleteDeckAsync(Guid deckId)
+    {
+        errorMessage = null;
+
+        if (string.IsNullOrWhiteSpace(accessToken))
+        {
+            errorMessage = "Access token is required to delete decks.";
+            return;
+        }
+
+        if (!deletingDecks.Add(deckId))
+        {
+            return;
+        }
+
+        try
+        {
+            await DecksApiClient.DeleteDeckAsync(accessToken, deckId);
+
+            if (decks is null)
+            {
+                return;
+            }
+
+            var updatedDecks = decks.Where(deck => deck.Id != deckId).ToList();
+            decks = updatedDecks;
+        }
+        catch (DecksApiException exception)
+        {
             errorMessage = exception.Message;
         }
         catch (Exception exception)
         {
             errorMessage = $"Unexpected error: {exception.Message}";
         }
+        finally
+        {
+            deletingDecks.Remove(deckId);
+        }
+    }
+
+    private static string GetDeleteErrorMessage(DecksApiException exception)
+    {
+        return exception.StatusCode switch
+        {
+            System.Net.HttpStatusCode.BadRequest => "Invalid deck identifier.",
+            System.Net.HttpStatusCode.Unauthorized => "Access token is missing or invalid.",
+            System.Net.HttpStatusCode.Forbidden => "Access to decks is forbidden.",
+            System.Net.HttpStatusCode.NotFound => "Deck was not found or you do not have access.",
+            _ => exception.Message,
+        };
     }
 }

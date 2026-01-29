@@ -36,3 +36,22 @@ Tworzy nowy zestaw dla zalogowanego u¿ytkownika. `user_id` pochodzi z tokenu JWT
   - `500 Internal Server Error`
 
 Szczegó³y w `docs/decks-post-endpoint.md`.
+
+### DELETE /rest/v1/decks?id=eq.{uuid}
+
+Usuwa zestaw fiszek zalogowanego u¿ytkownika. Rekordy fiszek powi¹zane z zestawem s¹ usuwane kaskadowo przez bazê danych.
+
+- Metoda: `DELETE`
+- URL: `/rest/v1/decks?id=eq.{uuid}`
+- Nag³ówek: `Authorization: Bearer <token>`
+- Parametry:
+  - `id` (wymagane, UUID zestawu)
+- OdpowiedŸ: `DeckDeleteResponse`
+- B³êdy:
+  - `400 Bad Request` (nieprawid³owy identyfikator)
+  - `401 Unauthorized`
+  - `403 Forbidden`
+  - `404 Not Found`
+  - `500 Internal Server Error`
+
+Szczegó³y w `docs/decks-delete-endpoint.md`.
