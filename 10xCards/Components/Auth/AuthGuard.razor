@@ -1,0 +1,33 @@
+@inject NavigationManager NavigationManager
+
+@if (IsAuthenticated)
+{
+    @ChildContent
+}
+else if (UnauthorizedContent is not null)
+{
+    @UnauthorizedContent
+}
+else
+{
+    <div class="alert alert-warning" role="alert">
+        Musisz siê zalogowaæ, aby zobaczyæ tê stronê.
+        <a class="alert-link" href="@LoginUrl">PrzejdŸ do logowania</a>
+    </div>
+}
+
+@code {
+    [Parameter] public bool IsAuthenticated { get; set; }
+    [Parameter] public bool RedirectToLogin { get; set; }
+    [Parameter] public string LoginUrl { get; set; } = "/auth/login";
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public RenderFragment? UnauthorizedContent { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        if (!IsAuthenticated && RedirectToLogin)
+        {
+            NavigationManager.NavigateTo(LoginUrl);
+        }
+    }
+}

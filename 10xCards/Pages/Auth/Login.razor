@@ -1,0 +1,59 @@
+@page "/auth/login"
+@layout AuthLayout
+
+<PageTitle>Logowanie</PageTitle>
+
+<AuthForm Title="Zaloguj siê"
+          SubmitText="Zaloguj siê"
+          Model="formModel"
+          OnValidSubmit="HandleValidSubmit"
+          IsLoading="isSubmitting">
+    <ChildContent>
+        <AuthErrorBanner Message="@errorMessage" />
+
+        @if (!string.IsNullOrWhiteSpace(infoMessage))
+        {
+            <div class="alert alert-success" role="alert">
+                @infoMessage
+            </div>
+        }
+
+        <AuthInput Id="login-email"
+                   Label="E-mail"
+                   Type="email"
+                   Placeholder="name@example.com"
+                   Value="formModel.Email"
+                   ValueChanged="@(value => formModel.Email = value ?? string.Empty)"
+                   ValueExpression="@(() => formModel.Email)" />
+
+        <AuthInput Id="login-password"
+                   Label="Has³o"
+                   Type="password"
+                   Placeholder="••••••••"
+                   Value="formModel.Password"
+                   ValueChanged="@(value => formModel.Password = value ?? string.Empty)"
+                   ValueExpression="@(() => formModel.Password)" />
+    </ChildContent>
+
+    <FooterContent>
+        <div class="d-flex justify-content-between">
+            <a href="/auth/forgot-password">Nie pamiêtasz has³a?</a>
+            <a href="/auth/register">Utwórz konto</a>
+        </div>
+    </FooterContent>
+</AuthForm>
+
+@code {
+    private readonly LoginRequest formModel = new();
+    private bool isSubmitting;
+    private string? errorMessage;
+    private string? infoMessage;
+
+    private Task HandleValidSubmit(EditContext editContext)
+    {
+        errorMessage = null;
+        isSubmitting = false;
+        infoMessage = "Formularz logowania jest gotowy. Integracja z backendem zostanie dodana w kolejnym kroku.";
+        return Task.CompletedTask;
+    }
+}

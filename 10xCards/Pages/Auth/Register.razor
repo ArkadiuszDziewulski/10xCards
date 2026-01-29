@@ -1,0 +1,66 @@
+@page "/auth/register"
+@layout AuthLayout
+
+<PageTitle>Rejestracja</PageTitle>
+
+<AuthForm Title="Utwórz konto"
+          SubmitText="Zarejestruj siê"
+          Model="formModel"
+          OnValidSubmit="HandleValidSubmit"
+          IsLoading="isSubmitting">
+    <ChildContent>
+        <AuthErrorBanner Message="@errorMessage" />
+
+        @if (!string.IsNullOrWhiteSpace(infoMessage))
+        {
+            <div class="alert alert-success" role="alert">
+                @infoMessage
+            </div>
+        }
+
+        <AuthInput Id="register-email"
+                   Label="E-mail"
+                   Type="email"
+                   Placeholder="name@example.com"
+                   Value="formModel.Email"
+                   ValueChanged="@(value => formModel.Email = value ?? string.Empty)"
+                   ValueExpression="@(() => formModel.Email)" />
+
+        <AuthInput Id="register-password"
+                   Label="Has³o"
+                   Type="password"
+                   Placeholder="••••••••"
+                   Value="formModel.Password"
+                   ValueChanged="@(value => formModel.Password = value ?? string.Empty)"
+                   ValueExpression="@(() => formModel.Password)" />
+
+        <AuthInput Id="register-confirm"
+                   Label="Powtórz has³o"
+                   Type="password"
+                   Placeholder="••••••••"
+                   Value="formModel.ConfirmPassword"
+                   ValueChanged="@(value => formModel.ConfirmPassword = value ?? string.Empty)"
+                   ValueExpression="@(() => formModel.ConfirmPassword)" />
+    </ChildContent>
+
+    <FooterContent>
+        <div class="text-center">
+            <a href="/auth/login">Masz ju¿ konto? Zaloguj siê</a>
+        </div>
+    </FooterContent>
+</AuthForm>
+
+@code {
+    private readonly RegisterRequest formModel = new();
+    private bool isSubmitting;
+    private string? errorMessage;
+    private string? infoMessage;
+
+    private Task HandleValidSubmit(EditContext editContext)
+    {
+        errorMessage = null;
+        isSubmitting = false;
+        infoMessage = "Formularz rejestracji jest gotowy. Integracja z backendem zostanie dodana w kolejnym kroku.";
+        return Task.CompletedTask;
+    }
+}
