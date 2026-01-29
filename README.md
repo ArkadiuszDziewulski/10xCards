@@ -6,6 +6,7 @@ Blazor WebAssembly aplikacja do zarz¹dzania zestawami fiszek i nauki z wykorzyst
 
 Rejestracja u¿ytkownika jest dostêpna pod `/auth/register` i korzysta z `supabase.Auth.SignUp(email, password)`.
 Po rejestracji Supabase wysy³a e-mail z linkiem potwierdzaj¹cym aktywacjê konta.
+Wejœcie na `/` lub `/decks` bez aktywnej sesji przekierowuje do `/auth/login`.
 
 ## REST API (Supabase PostgREST)
 

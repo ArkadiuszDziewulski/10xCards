@@ -7,6 +7,8 @@
 @using _10xCards.Services
 @inject DecksApiClient DecksApiClient
 @inject Supabase.Client SupabaseClient
+@inject SupabaseAuthService SupabaseAuthService
+@inject UserSessionState UserSessionState
 @inject NavigationManager NavigationManager
 
 <PageTitle>Moje zestawy</PageTitle>
@@ -62,6 +64,14 @@ else
 
     protected override async Task OnInitializedAsync()
     {
+        await SupabaseAuthService.EnsureInitializedAsync();
+
+        if (!UserSessionState.IsAuthenticated)
+        {
+            NavigationManager.NavigateTo("/auth/login");
+            return;
+        }
+
         await LoadDecksAsync();
     }
 
