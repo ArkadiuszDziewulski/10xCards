@@ -14,6 +14,7 @@ builder.Services.AddScoped(_ => new Supabase.Client(url, key, new SupabaseOption
 
 builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
 builder.Services.AddScoped<DecksApiClient>();
+builder.Services.AddScoped<FlashcardsApiClient>();
 
 await builder.Build().RunAsync();
 
