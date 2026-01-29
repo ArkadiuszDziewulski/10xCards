@@ -20,6 +20,7 @@ When introducing changes to the project, always follow the directory structure b
 - `./Models` - Data Models
 - `./Services` - API clients and services
 - `./docs` - Project documentation
+- `./ai` - Planing AI file
 When modifying the directory structure, always update this section.
 
 ## Coding practices
