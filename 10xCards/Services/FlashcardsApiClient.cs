@@ -228,6 +228,102 @@ public sealed class FlashcardsApiClient
         return createdFlashcards;
     }
 
+    public async Task UpdateSrsAsync(
+        string accessToken,
+        Guid flashcardId,
+        UpdateFlashcardSrsCommand command,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(accessToken))
+        {
+            throw new FlashcardsApiException("Access token is required.", HttpStatusCode.Unauthorized);
+        }
+
+        if (flashcardId == Guid.Empty)
+        {
+            throw new FlashcardsApiException("Flashcard id is required.", HttpStatusCode.BadRequest);
+        }
+
+        if (command is null)
+        {
+            throw new FlashcardsApiException("Request body is required.", HttpStatusCode.BadRequest);
+        }
+
+        if (command.NextReviewAt is null)
+        {
+            throw new FlashcardsApiException("Next review date is required.", HttpStatusCode.BadRequest);
+        }
+
+        if (command.Interval is null || command.Interval < 0)
+        {
+            throw new FlashcardsApiException("Interval must be non-negative.", HttpStatusCode.BadRequest);
+        }
+
+        if (command.EaseFactor is null || command.EaseFactor <= 0)
+        {
+            throw new FlashcardsApiException("Ease factor must be greater than zero.", HttpStatusCode.BadRequest);
+        }
+
+        if (command.RepetitionCount is null || command.RepetitionCount < 0)
+        {
+            throw new FlashcardsApiException("Repetition count must be non-negative.", HttpStatusCode.BadRequest);
+        }
+
+        if (string.IsNullOrWhiteSpace(supabaseUrl))
+        {
+            throw new InvalidOperationException("Supabase Url is not configured.");
+        }
+
+        var requestPayload = new FlashcardSrsUpdateRequest
+        {
+            NextReviewAt = command.NextReviewAt.Value,
+            Interval = command.Interval.Value,
+            EaseFactor = command.EaseFactor.Value,
+            RepetitionCount = command.RepetitionCount.Value,
+        };
+
+        var baseUrl = supabaseUrl.TrimEnd('/');
+        var requestUri =
+            $"{baseUrl}/rest/v1/flashcards?id=eq.{Uri.EscapeDataString(flashcardId.ToString())}";
+
+        using var requestMessage = new HttpRequestMessage(HttpMethod.Patch, requestUri);
+        requestMessage.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+        requestMessage.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+        requestMessage.Headers.TryAddWithoutValidation("Prefer", "return=minimal");
+        requestMessage.Content = new StringContent(
+            JsonSerializer.Serialize(requestPayload, jsonOptions),
+            Encoding.UTF8,
+            "application/json");
+
+        using var response = await httpClient.SendAsync(requestMessage, cancellationToken);
+        if (response.StatusCode == HttpStatusCode.Unauthorized)
+        {
+            throw new FlashcardsApiException("Unauthorized request.", response.StatusCode);
+        }
+
+        if (!response.IsSuccessStatusCode)
+        {
+            var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
+            var message = response.StatusCode switch
+            {
+                HttpStatusCode.BadRequest => "Invalid flashcard update payload.",
+                HttpStatusCode.Forbidden => "Access to flashcards is forbidden.",
+                HttpStatusCode.NotFound => "Flashcard not found.",
+                HttpStatusCode.InternalServerError => "Server error while updating flashcard.",
+                _ => "Failed to update flashcard.",
+            };
+
+            logger.LogWarning(
+                "Failed to update flashcard SRS. Status: {StatusCode}. Response: {Response}",
+                response.StatusCode,
+                errorContent);
+
+            throw new FlashcardsApiException(
+                string.IsNullOrWhiteSpace(errorContent) ? message : $"{message} {errorContent}",
+                response.StatusCode);
+        }
+    }
+
     public async Task<IReadOnlyList<FlashcardDto>> GetDueFlashcardsAsync(
         string accessToken,
         string? select = "*",
