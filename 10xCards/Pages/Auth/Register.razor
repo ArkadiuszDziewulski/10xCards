@@ -24,7 +24,7 @@
                    Label="E-mail"
                    Type="email"
                    Placeholder="name@example.com"
-                   Value="formModel.Email"
+                   Value="@formModel.Email"
                    ValueChanged="@(value => formModel.Email = value ?? string.Empty)"
                    ValueExpression="@(() => formModel.Email)" />
 
@@ -32,7 +32,7 @@
                    Label="Has³o"
                    Type="password"
                    Placeholder="••••••••"
-                   Value="formModel.Password"
+                   Value="@formModel.Password"
                    ValueChanged="@(value => formModel.Password = value ?? string.Empty)"
                    ValueExpression="@(() => formModel.Password)" />
 
@@ -40,7 +40,7 @@
                    Label="Powtórz has³o"
                    Type="password"
                    Placeholder="••••••••"
-                   Value="formModel.ConfirmPassword"
+                   Value="@formModel.ConfirmPassword"
                    ValueChanged="@(value => formModel.ConfirmPassword = value ?? string.Empty)"
                    ValueExpression="@(() => formModel.ConfirmPassword)" />
     </ChildContent>
