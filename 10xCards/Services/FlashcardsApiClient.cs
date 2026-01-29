@@ -104,6 +104,75 @@ public sealed class FlashcardsApiClient
         return flashcards;
     }
 
+    public async Task<IReadOnlyList<FlashcardDto>> GetDueFlashcardsAsync(
+        string accessToken,
+        string? select = "*",
+        int? limit = null,
+        int? offset = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(accessToken))
+        {
+            throw new FlashcardsApiException("Access token is required.", HttpStatusCode.Unauthorized);
+        }
+
+        if (string.IsNullOrWhiteSpace(supabaseUrl))
+        {
+            throw new InvalidOperationException("Supabase Url is not configured.");
+        }
+
+        if (limit is < 0)
+        {
+            throw new FlashcardsApiException("Limit must be non-negative.", HttpStatusCode.BadRequest);
+        }
+
+        if (offset is < 0)
+        {
+            throw new FlashcardsApiException("Offset must be non-negative.", HttpStatusCode.BadRequest);
+        }
+
+        var normalizedSelect = NormalizeSelect(select);
+        var requestUri = BuildDueRequestUri(normalizedSelect, limit, offset);
+
+        using var request = new HttpRequestMessage(HttpMethod.Get, requestUri);
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+        request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+        using var response = await httpClient.SendAsync(request, cancellationToken);
+        if (response.StatusCode == HttpStatusCode.Unauthorized)
+        {
+            throw new FlashcardsApiException("Unauthorized request.", response.StatusCode);
+        }
+
+        if (!response.IsSuccessStatusCode)
+        {
+            var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
+            var message = response.StatusCode switch
+            {
+                HttpStatusCode.BadRequest => "Invalid request parameters.",
+                HttpStatusCode.Forbidden => "Access to flashcards is forbidden.",
+                HttpStatusCode.NotFound => "Flashcards not found.",
+                HttpStatusCode.InternalServerError => "Server error while loading flashcards.",
+                _ => "Failed to load flashcards.",
+            };
+
+            logger.LogWarning(
+                "Failed to load due flashcards. Status: {StatusCode}. Response: {Response}",
+                response.StatusCode,
+                errorContent);
+
+            throw new FlashcardsApiException(
+                string.IsNullOrWhiteSpace(errorContent) ? message : $"{message} {errorContent}",
+                response.StatusCode);
+        }
+
+        await using var contentStream = await response.Content.ReadAsStreamAsync(cancellationToken);
+        var flashcards = await JsonSerializer.DeserializeAsync<List<FlashcardDto>>(contentStream, jsonOptions, cancellationToken)
+            ?? new List<FlashcardDto>();
+
+        return flashcards;
+    }
+
     private static string NormalizeSelect(string? select)
     {
         if (string.IsNullOrWhiteSpace(select))
@@ -134,6 +203,29 @@ public sealed class FlashcardsApiClient
         var query =
             $"deck_id=eq.{Uri.EscapeDataString(deckId.ToString())}&select={Uri.EscapeDataString(select)}";
         return $"{baseUrl}/rest/v1/flashcards?{query}";
+    }
+
+    private string BuildDueRequestUri(string select, int? limit, int? offset)
+    {
+        var baseUrl = supabaseUrl.TrimEnd('/');
+        var queryParts = new List<string>
+        {
+            "next_review_at=lte.now()",
+            "status=eq.active",
+            $"select={Uri.EscapeDataString(select)}",
+        };
+
+        if (limit is not null)
+        {
+            queryParts.Add($"limit={limit.Value}");
+        }
+
+        if (offset is not null)
+        {
+            queryParts.Add($"offset={offset.Value}");
+        }
+
+        return $"{baseUrl}/rest/v1/flashcards?{string.Join('&', queryParts)}";
     }
 }
 
