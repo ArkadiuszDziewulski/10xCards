@@ -5,7 +5,8 @@
 ### Strony i layouty
 - `Pages/Auth/Register.razor`
   - Formularz rejestracji z polami: e-mail, has³o, powtórzenie has³a.
-  - Po sukcesie: automatyczne zalogowanie i przekierowanie do widoku generowania fiszek.
+  - Po sukcesie: automatyczne zalogowanie i przekierowanie do widoku generowania fiszek (gdy potwierdzenie e-mail jest wy³¹czone),
+    w przeciwnym razie komunikat o koniecznoœci potwierdzenia adresu e-mail.
 - `Pages/Auth/Login.razor`
   - Formularz logowania z polami: e-mail, has³o.
   - Po sukcesie: przekierowanie do widoku generowania fiszek.
@@ -44,7 +45,7 @@
   - B³êdy sieci/timeout ? „Nie uda³o siê po³¹czyæ z us³ug¹. Spróbuj ponownie.”
 
 ### Scenariusze kluczowe
-- Rejestracja: walidacja ? Supabase sign-up ? auto-login ? przekierowanie.
+- Rejestracja: walidacja ? Supabase sign-up ? auto-login i przekierowanie (gdy brak wymogu potwierdzenia e-mail) lub komunikat o potwierdzeniu.
 - Logowanie: walidacja ? Supabase sign-in ? zapis sesji ? przekierowanie.
 - Odzyskiwanie has³a: walidacja e-mail ? Supabase reset ? komunikat.
 - Wylogowanie: wyczyszczenie sesji ? przekierowanie do `Login`.
@@ -107,3 +108,4 @@ Blazor WebAssembly komunikuje siê bezpoœrednio z Supabase SDK w `Services/Supaba
 - UI rozdziela widoki auth i non-auth poprzez dedykowany `AuthLayout` i `MainLayout`.
 - Komponenty auth s¹ wielokrotnego u¿ycia i izoluj¹ walidacjê oraz komunikaty b³êdów.
 - Logika integracyjna znajduje siê w `Services`, z opcj¹ dodania lekkiego BFF jeœli wymagane bêdzie dodatkowe zabezpieczenie.
+- Specyfikacja obejmuje historyjki US-001 i US-002; pozosta³e historyjki wymagaj¹ osobnych planów modu³owych.
