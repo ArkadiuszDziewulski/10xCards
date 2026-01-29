@@ -10,11 +10,13 @@
 
     <main>
         <div class="top-row px-4 d-flex align-items-center">
-            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
             <div class="ms-auto">
-                <UserMenu IsAuthenticated="UserSessionState.IsAuthenticated"
-                          UserEmail="UserSessionState.UserEmail"
-                          OnLogout="HandleLogout" />
+                @if (isSessionVerified)
+                {
+                    <UserMenu IsAuthenticated="UserSessionState.IsAuthenticated"
+                              UserEmail="@UserSessionState.UserEmail"
+                              OnLogout="HandleLogout" />
+                }
             </div>
         </div>
 
@@ -25,14 +27,21 @@
 </div>
 
 @code {
+    private bool isSessionVerified;
+
     protected override async Task OnInitializedAsync()
     {
         UserSessionState.OnChange += HandleSessionChanged;
-        await SupabaseAuthService.EnsureInitializedAsync();
+        await VerifySessionAsync();
     }
 
     private async Task HandleLogout()
     {
+        if (!UserSessionState.IsAuthenticated)
+        {
+            return;
+        }
+
         var result = await SupabaseAuthService.SignOutAsync();
         if (!result.IsSuccess)
         {
@@ -44,7 +53,23 @@
 
     private void HandleSessionChanged()
     {
+        if (isSessionVerified && !UserSessionState.IsAuthenticated)
+        {
+            NavigationManager.NavigateTo("/auth/login");
+        }
+
         _ = InvokeAsync(StateHasChanged);
+    }
+
+    private async Task VerifySessionAsync()
+    {
+        await SupabaseAuthService.EnsureInitializedAsync();
+        isSessionVerified = true;
+
+        if (!UserSessionState.IsAuthenticated)
+        {
+            NavigationManager.NavigateTo("/auth/login");
+        }
     }
 
     public void Dispose()
