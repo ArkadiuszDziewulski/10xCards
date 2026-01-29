@@ -2,11 +2,8 @@ using System.Text.Json.Serialization;
 
 namespace _10xCards.Models;
 
-public sealed record CreateDeckCommand
+public sealed record CreateDeckRequest
 {
-    [JsonPropertyName("user_id")]
-    public Guid UserId { get; init; }
-
     [JsonPropertyName("name")]
     public required string Name { get; init; }
 }

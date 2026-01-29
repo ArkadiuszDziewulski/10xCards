@@ -18,3 +18,21 @@ Pobiera listê zestawów zalogowanego u¿ytkownika. Zapytanie jest filtrowane przez
   - `401 Unauthorized`
   - `403 Forbidden`
   - `500 Internal Server Error`
+
+### POST /rest/v1/decks
+
+Tworzy nowy zestaw dla zalogowanego u¿ytkownika. `user_id` pochodzi z tokenu JWT.
+
+- Metoda: `POST`
+- URL: `/rest/v1/decks`
+- Nag³ówek: `Authorization: Bearer <token>`
+- Body:
+  - `name` (wymagane)
+- OdpowiedŸ: `DeckDto`
+- B³êdy:
+  - `400 Bad Request` (pusty lub zbyt d³ugi `name`)
+  - `401 Unauthorized`
+  - `409 Conflict` (duplikat nazwy w ramach u¿ytkownika)
+  - `500 Internal Server Error`
+
+Szczegó³y w `docs/decks-post-endpoint.md`.
