@@ -1,4 +1,8 @@
 ﻿@inherits LayoutComponentBase
+@implements IDisposable
+@inject SupabaseAuthService SupabaseAuthService
+@inject UserSessionState UserSessionState
+@inject NavigationManager NavigationManager
 <div class="page">
     <div class="sidebar">
         <NavMenu />
@@ -8,7 +12,9 @@
         <div class="top-row px-4 d-flex align-items-center">
             <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
             <div class="ms-auto">
-                <UserMenu />
+                <UserMenu IsAuthenticated="UserSessionState.IsAuthenticated"
+                          UserEmail="UserSessionState.UserEmail"
+                          OnLogout="HandleLogout" />
             </div>
         </div>
 
@@ -17,3 +23,32 @@
         </article>
     </main>
 </div>
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        UserSessionState.OnChange += HandleSessionChanged;
+        await SupabaseAuthService.EnsureInitializedAsync();
+    }
+
+    private async Task HandleLogout()
+    {
+        var result = await SupabaseAuthService.SignOutAsync();
+        if (!result.IsSuccess)
+        {
+            return;
+        }
+
+        NavigationManager.NavigateTo("/auth/login");
+    }
+
+    private void HandleSessionChanged()
+    {
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        UserSessionState.OnChange -= HandleSessionChanged;
+    }
+}

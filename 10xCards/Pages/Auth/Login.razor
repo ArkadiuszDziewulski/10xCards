@@ -1,5 +1,7 @@
 @page "/auth/login"
 @layout AuthLayout
+@inject SupabaseAuthService SupabaseAuthService
+@inject NavigationManager NavigationManager
 
 <PageTitle>Logowanie</PageTitle>
 
@@ -49,11 +51,39 @@
     private string? errorMessage;
     private string? infoMessage;
 
-    private Task HandleValidSubmit(EditContext editContext)
+    private async Task HandleValidSubmit(EditContext editContext)
     {
         errorMessage = null;
-        isSubmitting = false;
-        infoMessage = "Formularz logowania jest gotowy. Integracja z backendem zostanie dodana w kolejnym kroku.";
-        return Task.CompletedTask;
+        infoMessage = null;
+
+        if (isSubmitting)
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(formModel.Email) || string.IsNullOrWhiteSpace(formModel.Password))
+        {
+            errorMessage = "Podaj poprawny e-mail i has³o.";
+            return;
+        }
+
+        isSubmitting = true;
+        StateHasChanged();
+
+        try
+        {
+            var result = await SupabaseAuthService.SignInAsync(formModel);
+            if (!result.IsSuccess)
+            {
+                errorMessage = result.ErrorMessage ?? "Nie uda³o siê zalogowaæ. Spróbuj ponownie.";
+                return;
+            }
+
+            NavigationManager.NavigateTo("/decks");
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
     }
 }
