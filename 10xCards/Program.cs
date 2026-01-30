@@ -18,6 +18,7 @@ builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.
 builder.Services.AddScoped<DecksApiClient>();
 builder.Services.AddScoped<FlashcardsApiClient>();
 builder.Services.AddScoped<OpenRouterService>();
+builder.Services.AddScoped<FlashcardGenerationService>();
 
 await builder.Build().RunAsync();
 

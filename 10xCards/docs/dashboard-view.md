@@ -7,6 +7,9 @@ Widok Dashboard prezentuje listê zestawów fiszek zalogowanego u¿ytkownika oraz u
 - `/` (domyœlny widok po zalogowaniu)
 - `/decks`
 
+## Powi¹zane widoki
+- `Generator fiszek AI` (`/generate`) opisany w `docs/generate-flashcards.md`.
+
 ## Komponenty
 - `Pages/DashboardPage.razor` – kontener logiki i stanów widoku.
 - `Components/Dashboard/DeckList.razor` – siatka zestawów.

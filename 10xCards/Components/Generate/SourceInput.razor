@@ -1,0 +1,68 @@
+<div class="mb-3">
+    <label class="form-label">Tekst Ÿród³owy</label>
+    <textarea class="form-control"
+              rows="8"
+              value="@currentText"
+              @oninput="HandleInput"
+              @onblur="HandleBlur"
+              disabled="@IsDisabled"></textarea>
+    <div class="d-flex justify-content-between mt-1">
+        <small class="text-muted">Wklej tekst o d³ugoœci od @MinLength do @MaxLength znaków.</small>
+        <small class="@CounterClass">@CharCount / @MaxLength</small>
+    </div>
+    @if (!string.IsNullOrWhiteSpace(validationMessage))
+    {
+        <div class="text-danger small mt-1">@validationMessage</div>
+    }
+</div>
+
+@code {
+    [Parameter] public string Text { get; set; } = string.Empty;
+    [Parameter] public int MinLength { get; set; } = 1000;
+    [Parameter] public int MaxLength { get; set; } = 10000;
+    [Parameter] public bool IsDisabled { get; set; }
+    [Parameter] public EventCallback<string> OnTextChanged { get; set; }
+
+    private string currentText = string.Empty;
+    private string? validationMessage;
+
+    private int CharCount => currentText.Length;
+    private string CounterClass => CharCount < MinLength || CharCount > MaxLength ? "text-danger" : "text-muted";
+
+    protected override void OnParametersSet()
+    {
+        currentText = Text ?? string.Empty;
+    }
+
+    private async Task HandleInput(ChangeEventArgs args)
+    {
+        currentText = args.Value?.ToString() ?? string.Empty;
+        if (!string.IsNullOrWhiteSpace(validationMessage))
+        {
+            Validate();
+        }
+
+        if (!OnTextChanged.HasDelegate)
+        {
+            return;
+        }
+
+        await OnTextChanged.InvokeAsync(currentText);
+    }
+
+    private void HandleBlur()
+    {
+        Validate();
+    }
+
+    private void Validate()
+    {
+        if (CharCount < MinLength || CharCount > MaxLength)
+        {
+            validationMessage = $"Tekst musi mieœciæ siê w zakresie {MinLength}-{MaxLength} znaków.";
+            return;
+        }
+
+        validationMessage = null;
+    }
+}

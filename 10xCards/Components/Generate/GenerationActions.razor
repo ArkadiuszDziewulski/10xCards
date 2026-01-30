@@ -1,0 +1,20 @@
+<div class="d-flex flex-column gap-2">
+    <button class="btn btn-primary" type="button" disabled="@(!CanGenerate || IsBusy)" @onclick="OnGenerate">
+        @if (IsBusy)
+        {
+            <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+        }
+        Generuj
+    </button>
+    <button class="btn btn-success" type="button" disabled="@(!CanSave || IsBusy)" @onclick="OnSave">Zapisz</button>
+    <button class="btn btn-outline-secondary" type="button" disabled="@IsBusy" @onclick="OnReset">Wyczyœæ</button>
+</div>
+
+@code {
+    [Parameter] public bool CanGenerate { get; set; }
+    [Parameter] public bool CanSave { get; set; }
+    [Parameter] public bool IsBusy { get; set; }
+    [Parameter] public EventCallback OnGenerate { get; set; }
+    [Parameter] public EventCallback OnSave { get; set; }
+    [Parameter] public EventCallback OnReset { get; set; }
+}

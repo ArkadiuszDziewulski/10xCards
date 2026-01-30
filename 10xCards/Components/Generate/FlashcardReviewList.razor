@@ -1,0 +1,30 @@
+@using _10xCards.Models
+
+@if (Items.Count == 0)
+{
+    <div class="alert alert-info">
+        Brak fiszek do wyœwietlenia.
+    </div>
+}
+else
+{
+    @foreach (var item in Items)
+    {
+        <FlashcardReviewItem Item="item" OnChange="HandleItemChanged" />
+    }
+}
+
+@code {
+    [Parameter] public IReadOnlyList<FlashcardProposalViewModel> Items { get; set; } = Array.Empty<FlashcardProposalViewModel>();
+    [Parameter] public EventCallback<FlashcardProposalViewModel> OnItemChanged { get; set; }
+
+    private async Task HandleItemChanged(FlashcardProposalViewModel item)
+    {
+        if (!OnItemChanged.HasDelegate)
+        {
+            return;
+        }
+
+        await OnItemChanged.InvokeAsync(item);
+    }
+}

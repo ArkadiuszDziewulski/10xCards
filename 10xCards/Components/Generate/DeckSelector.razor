@@ -1,0 +1,89 @@
+@using _10xCards.Models
+
+<div class="mb-3">
+    <div class="btn-group mb-3" role="group" aria-label="Wybór zestawu">
+        <input class="btn-check" type="radio" name="deck-mode" id="deck-mode-existing" checked="@(Selection.Mode == DeckSelectionMode.Existing)" @onchange="() => ChangeMode(DeckSelectionMode.Existing)" />
+        <label class="btn btn-outline-primary" for="deck-mode-existing">Istniej¹cy zestaw</label>
+        <input class="btn-check" type="radio" name="deck-mode" id="deck-mode-new" checked="@(Selection.Mode == DeckSelectionMode.New)" @onchange="() => ChangeMode(DeckSelectionMode.New)" />
+        <label class="btn btn-outline-primary" for="deck-mode-new">Nowy zestaw</label>
+    </div>
+
+    @if (Selection.Mode == DeckSelectionMode.Existing)
+    {
+        <select class="form-select" @onchange="HandleDeckChanged">
+            <option value="">Wybierz zestaw</option>
+            @foreach (var deck in Decks)
+            {
+                <option value="@deck.Id" selected="@(deck.Id == Selection.SelectedDeckId)">@deck.Name</option>
+            }
+        </select>
+    }
+    else
+    {
+        <input class="form-control" placeholder="Nazwa nowego zestawu" value="@Selection.NewDeckName" @oninput="HandleNewDeckChanged" />
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public DeckSelectionViewModel Selection { get; set; } = new();
+    [Parameter] public IReadOnlyList<DeckOptionDto> Decks { get; set; } = Array.Empty<DeckOptionDto>();
+    [Parameter] public EventCallback<DeckSelectionViewModel> OnSelectionChanged { get; set; }
+
+    private async Task ChangeMode(DeckSelectionMode mode)
+    {
+        if (Selection.Mode == mode)
+        {
+            return;
+        }
+
+        var updated = new DeckSelectionViewModel
+        {
+            Mode = mode,
+            SelectedDeckId = mode == DeckSelectionMode.Existing ? Selection.SelectedDeckId : null,
+            NewDeckName = mode == DeckSelectionMode.New ? Selection.NewDeckName : null,
+        };
+
+        await NotifyChanged(updated);
+    }
+
+    private async Task HandleDeckChanged(ChangeEventArgs args)
+    {
+        var value = args.Value?.ToString();
+        Guid? deckId = null;
+        if (!string.IsNullOrWhiteSpace(value) && Guid.TryParse(value, out var parsed))
+        {
+            deckId = parsed;
+        }
+
+        var updated = new DeckSelectionViewModel
+        {
+            Mode = DeckSelectionMode.Existing,
+            SelectedDeckId = deckId,
+            NewDeckName = null,
+        };
+
+        await NotifyChanged(updated);
+    }
+
+    private async Task HandleNewDeckChanged(ChangeEventArgs args)
+    {
+        var updated = new DeckSelectionViewModel
+        {
+            Mode = DeckSelectionMode.New,
+            SelectedDeckId = null,
+            NewDeckName = args.Value?.ToString(),
+        };
+
+        await NotifyChanged(updated);
+    }
+
+    private async Task NotifyChanged(DeckSelectionViewModel updated)
+    {
+        if (!OnSelectionChanged.HasDelegate)
+        {
+            return;
+        }
+
+        await OnSelectionChanged.InvokeAsync(updated);
+    }
+}

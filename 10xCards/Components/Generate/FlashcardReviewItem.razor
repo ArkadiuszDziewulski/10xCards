@@ -1,0 +1,147 @@
+@using _10xCards.Models
+
+<div class="card mb-3">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" checked="@Item.IsAccepted" @onchange="HandleAcceptedChanged" />
+                <label class="form-check-label">ZatwierdŸ</label>
+            </div>
+            <span class="badge @(Item.IsAccepted ? "bg-success" : "bg-secondary")">
+                @(Item.IsAccepted ? "Zaakceptowana" : "Odrzucona")
+            </span>
+        </div>
+
+        @if (Item.IsEditing)
+        {
+            <div class="mb-3">
+                <label class="form-label">Przód</label>
+                <input class="form-control" value="@frontValue" @oninput="HandleFrontChanged" />
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Ty³</label>
+                <input class="form-control" value="@backValue" @oninput="HandleBackChanged" />
+            </div>
+        }
+        else
+        {
+            <div class="mb-2">
+                <div class="fw-semibold">Przód</div>
+                <div>@Item.Front</div>
+            </div>
+            <div>
+                <div class="fw-semibold">Ty³</div>
+                <div>@Item.Back</div>
+            </div>
+        }
+
+        @if (!string.IsNullOrWhiteSpace(Item.ValidationMessage))
+        {
+            <div class="text-danger small mt-2">@Item.ValidationMessage</div>
+        }
+
+        <div class="d-flex gap-2 mt-3">
+            @if (Item.IsEditing)
+            {
+                <button class="btn btn-primary btn-sm" type="button" @onclick="HandleSave">Zapisz</button>
+            }
+            else
+            {
+                <button class="btn btn-outline-primary btn-sm" type="button" @onclick="HandleEdit">Edytuj</button>
+            }
+            <button class="btn btn-outline-danger btn-sm" type="button" @onclick="HandleReject">Odrzuæ</button>
+        </div>
+    </div>
+</div>
+
+@code {
+    private const int MaxLength = 500;
+
+    [Parameter, EditorRequired] public FlashcardProposalViewModel Item { get; set; } = new();
+    [Parameter] public EventCallback<FlashcardProposalViewModel> OnChange { get; set; }
+
+    private string frontValue = string.Empty;
+    private string backValue = string.Empty;
+
+    protected override void OnParametersSet()
+    {
+        frontValue = Item.Front ?? string.Empty;
+        backValue = Item.Back ?? string.Empty;
+    }
+
+    private async Task HandleAcceptedChanged(ChangeEventArgs args)
+    {
+        Item.IsAccepted = args.Value is bool accepted && accepted;
+        await NotifyChange();
+    }
+
+    private async Task HandleEdit()
+    {
+        Item.IsEditing = true;
+        Item.ValidationMessage = null;
+        await NotifyChange();
+    }
+
+    private async Task HandleSave()
+    {
+        var trimmedFront = frontValue.Trim();
+        var trimmedBack = backValue.Trim();
+
+        if (!Validate(trimmedFront, trimmedBack))
+        {
+            await NotifyChange();
+            return;
+        }
+
+        Item.Front = trimmedFront;
+        Item.Back = trimmedBack;
+        Item.IsEditing = false;
+        Item.ValidationMessage = null;
+        await NotifyChange();
+    }
+
+    private async Task HandleReject()
+    {
+        Item.IsAccepted = false;
+        Item.IsEditing = false;
+        Item.ValidationMessage = null;
+        await NotifyChange();
+    }
+
+    private void HandleFrontChanged(ChangeEventArgs args)
+    {
+        frontValue = args.Value?.ToString() ?? string.Empty;
+    }
+
+    private void HandleBackChanged(ChangeEventArgs args)
+    {
+        backValue = args.Value?.ToString() ?? string.Empty;
+    }
+
+    private bool Validate(string front, string back)
+    {
+        if (string.IsNullOrWhiteSpace(front) || string.IsNullOrWhiteSpace(back))
+        {
+            Item.ValidationMessage = "Przód i ty³ fiszki s¹ wymagane.";
+            return false;
+        }
+
+        if (front.Length > MaxLength || back.Length > MaxLength)
+        {
+            Item.ValidationMessage = $"Treœæ fiszki mo¿e mieæ maksymalnie {MaxLength} znaków.";
+            return false;
+        }
+
+        return true;
+    }
+
+    private async Task NotifyChange()
+    {
+        if (!OnChange.HasDelegate)
+        {
+            return;
+        }
+
+        await OnChange.InvokeAsync(Item);
+    }
+}

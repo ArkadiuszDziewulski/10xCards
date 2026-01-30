@@ -59,3 +59,23 @@ Szczegó³y w `docs/decks-delete-endpoint.md`.
 ## OpenRouter
 
 Konfiguracja i u¿ycie serwisu LLM opisane s¹ w `docs/openrouter-service.md`.
+
+## Generator fiszek AI
+
+### POST /functions/v1/generate-flashcards
+
+Generuje propozycje fiszek na podstawie wklejonego tekstu.
+
+- Metoda: `POST`
+- URL: `/functions/v1/generate-flashcards`
+- Nag³ówek: `Authorization: Bearer <token>`
+- Body:
+  - `text` (wymagane)
+  - `amount` (wymagane, >= 1)
+- OdpowiedŸ: `GenerateFlashcardsResponse`
+- B³êdy:
+  - `400 Bad Request`
+  - `401 Unauthorized`
+  - `403 Forbidden`
+  - `429 Too Many Requests`
+  - `500 Internal Server Error`
