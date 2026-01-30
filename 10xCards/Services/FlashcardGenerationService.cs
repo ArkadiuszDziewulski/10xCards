@@ -1,8 +1,8 @@
 using System.Net;
-using System.Net.Http.Headers;
-using System.Text;
 using System.Text.Json;
 using _10xCards.Models;
+using Supabase;
+using Supabase.Functions;
 
 namespace _10xCards.Services;
 
@@ -13,18 +13,15 @@ public sealed class FlashcardGenerationService
         PropertyNameCaseInsensitive = true,
     };
 
-    private readonly HttpClient httpClient;
+    private readonly Supabase.Client supabase;
     private readonly ILogger<FlashcardGenerationService> logger;
-    private readonly string supabaseUrl;
 
     public FlashcardGenerationService(
-        HttpClient httpClient,
-        IConfiguration configuration,
+        Supabase.Client supabase,
         ILogger<FlashcardGenerationService> logger)
     {
-        this.httpClient = httpClient;
+        this.supabase = supabase;
         this.logger = logger;
-        supabaseUrl = configuration["Supabase:Url"] ?? string.Empty;
     }
 
     public async Task<GenerateFlashcardsResponse> GenerateAsync(
@@ -52,68 +49,26 @@ public sealed class FlashcardGenerationService
             throw new FlashcardGenerationException("Amount must be greater than zero.", HttpStatusCode.BadRequest);
         }
 
-        if (string.IsNullOrWhiteSpace(supabaseUrl))
+        var body = new Dictionary<string, object>
         {
-            throw new InvalidOperationException("Supabase Url is not configured.");
-        }
-
-        var baseUrl = supabaseUrl.TrimEnd('/');
-        var requestUri = $"{baseUrl}/functions/v1/generate-flashcards";
-
-        using var requestMessage = new HttpRequestMessage(HttpMethod.Post, requestUri);
-        requestMessage.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
-        requestMessage.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-        requestMessage.Content = new StringContent(
-            JsonSerializer.Serialize(request, JsonOptions),
-            Encoding.UTF8,
-            "application/json");
-
-        using var response = await httpClient.SendAsync(requestMessage, cancellationToken);
-        if (response.StatusCode == HttpStatusCode.Unauthorized)
+            { "text", request.Text },
+            { "amount", request.Amount }
+        };
+        var jsonBody = JsonSerializer.Serialize(body);
+        try
         {
-            throw new FlashcardGenerationException("Unauthorized request.", response.StatusCode);
-        }
-
-        if (!response.IsSuccessStatusCode)
-        {
-            var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
-            var apiMessage = TryExtractErrorMessage(errorContent);
-            var message = response.StatusCode switch
+            var response = await supabase.Functions.Invoke<GenerateFlashcardsResponse>("generate-flashcards", jsonBody);
+            if (response == null)
             {
-                (HttpStatusCode)429 => "Rate limit exceeded.",
-                HttpStatusCode.BadRequest => "Invalid generation request.",
-                HttpStatusCode.Forbidden => "Access to generation endpoint is forbidden.",
-                HttpStatusCode.InternalServerError => "Server error while generating flashcards.",
-                HttpStatusCode.BadGateway or HttpStatusCode.ServiceUnavailable or HttpStatusCode.GatewayTimeout
-                    => "Generation service is unavailable.",
-                _ => "Failed to generate flashcards.",
-            };
-
-            logger.LogWarning(
-                "Failed to generate flashcards. Status: {StatusCode}. Response: {Response}",
-                response.StatusCode,
-                errorContent);
-
-            var combinedMessage = string.IsNullOrWhiteSpace(apiMessage)
-                ? message
-                : $"{message} {apiMessage}";
-
-            throw new FlashcardGenerationException(combinedMessage, response.StatusCode);
+                throw new FlashcardGenerationException("Empty response from generation endpoint.", HttpStatusCode.NoContent);
+            }
+            return response;
         }
-
-        if (response.Content.Headers.ContentLength == 0)
+        catch (Exception ex)
         {
-            throw new FlashcardGenerationException("Empty response from generation endpoint.", HttpStatusCode.NoContent);
+            logger.LogWarning("Error during function invoke: {Message}", ex.Message);
+            throw new FlashcardGenerationException($"Error invoking Supabase function: {ex.Message}", HttpStatusCode.InternalServerError);
         }
-
-        await using var contentStream = await response.Content.ReadAsStreamAsync(cancellationToken);
-        var parsed = await JsonSerializer.DeserializeAsync<GenerateFlashcardsResponse>(contentStream, JsonOptions, cancellationToken);
-        if (parsed is null)
-        {
-            throw new FlashcardGenerationException("Invalid response from generation endpoint.", HttpStatusCode.InternalServerError);
-        }
-
-        return parsed;
     }
 
     private static string? TryExtractErrorMessage(string? errorContent)
