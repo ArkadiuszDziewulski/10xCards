@@ -159,8 +159,7 @@ Konstruktor inicjalizuje us³ugê na podstawie konfiguracji i zale¿noœci infrastru
 2. **Komunikat u¿ytkownika**
    - Przyk³ad: `{"role": "user", "content": "Wygeneruj podsumowanie."}`
 3. **response_format**
-   - Przyk³ad:
-     - `{ "type": "json_schema", "json_schema": { "name": "ChatResponse", "strict": true, "schema": { "type": "object", "properties": { "answer": { "type": "string" } }, "required": ["answer"], "additionalProperties": false } } }`
+   - `{ type: 'json_schema', json_schema: { name: 'weather', strict: true, schema: jsonSchemaObj } }`
 4. **Nazwa modelu**
    - Przyk³ad: `"model": "openai/gpt-4.1"`
 5. **Parametry modelu**
