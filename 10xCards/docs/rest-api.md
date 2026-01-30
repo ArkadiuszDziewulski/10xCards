@@ -72,7 +72,10 @@ Generuje propozycje fiszek na podstawie wklejonego tekstu.
 - Body:
   - `text` (wymagane)
   - `amount` (wymagane, >= 1)
-- OdpowiedŸ: `GenerateFlashcardsResponse`
+- OdpowiedŸ: `GenerateFlashcardsResponse` (201 Created)
+- Walidacja:
+  - `text` 1000-10000 znaków
+  - `amount` > 0
 - B³êdy:
   - `400 Bad Request`
   - `401 Unauthorized`

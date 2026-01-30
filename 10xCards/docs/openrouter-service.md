@@ -16,6 +16,15 @@ W pliku `wwwroot/appsettings.json` ustaw dane dostepu do OpenRouter:
 - `Url` to bazowy adres API (serwis dodaje `/chat/completions`).
 - `Key` przechowuj w zmiennych srodowiskowych podczas pracy produkcyjnej.
 
+## Konfiguracja Edge Function
+
+Edge Function korzysta z ponizszych zmiennych srodowiskowych:
+
+- `OPENROUTER_URL` (domyslnie `https://openrouter.ai/api/v1`)
+- `OPENROUTER_KEY`
+- `OPENROUTER_MODEL` (domyslnie `openai/gpt-4o-mini`)
+- `OPENROUTER_TIMEOUT_MS` (domyslnie `30000`)
+
 ## Uzycie serwisu
 
 Serwis `OpenRouterService` pozwala zbudowac zadanie przy pomocy `BuildRequest`, a nastepnie wyslac je metoda `SendChatAsync`.
