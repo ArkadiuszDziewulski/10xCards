@@ -77,12 +77,15 @@ public sealed class FlashcardGenerationService
         if (!response.IsSuccessStatusCode)
         {
             var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
+            var apiMessage = TryExtractErrorMessage(errorContent);
             var message = response.StatusCode switch
             {
                 (HttpStatusCode)429 => "Rate limit exceeded.",
                 HttpStatusCode.BadRequest => "Invalid generation request.",
                 HttpStatusCode.Forbidden => "Access to generation endpoint is forbidden.",
                 HttpStatusCode.InternalServerError => "Server error while generating flashcards.",
+                HttpStatusCode.BadGateway or HttpStatusCode.ServiceUnavailable or HttpStatusCode.GatewayTimeout
+                    => "Generation service is unavailable.",
                 _ => "Failed to generate flashcards.",
             };
 
@@ -91,9 +94,11 @@ public sealed class FlashcardGenerationService
                 response.StatusCode,
                 errorContent);
 
-            throw new FlashcardGenerationException(
-                string.IsNullOrWhiteSpace(errorContent) ? message : $"{message} {errorContent}",
-                response.StatusCode);
+            var combinedMessage = string.IsNullOrWhiteSpace(apiMessage)
+                ? message
+                : $"{message} {apiMessage}";
+
+            throw new FlashcardGenerationException(combinedMessage, response.StatusCode);
         }
 
         if (response.Content.Headers.ContentLength == 0)
@@ -109,6 +114,29 @@ public sealed class FlashcardGenerationService
         }
 
         return parsed;
+    }
+
+    private static string? TryExtractErrorMessage(string? errorContent)
+    {
+        if (string.IsNullOrWhiteSpace(errorContent))
+        {
+            return null;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(errorContent);
+            if (document.RootElement.TryGetProperty("message", out var message) &&
+                message.ValueKind == JsonValueKind.String)
+            {
+                return message.GetString();
+            }
+        }
+        catch (JsonException)
+        {
+        }
+
+        return null;
     }
 }
 

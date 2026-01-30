@@ -20,6 +20,10 @@ public partial class GenerateFlashcards
     [Inject] public UserSessionState UserSessionState { get; set; } = default!;
     [Inject] public NavigationManager NavigationManager { get; set; } = default!;
 
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "deckId")]
+    public Guid? DeckId { get; set; }
+
     private readonly GenerateStateViewModel state = new();
     private readonly List<DeckOptionDto> decks = new();
     private DeckSelectionViewModel deckSelection = new();
@@ -62,6 +66,35 @@ public partial class GenerateFlashcards
         }
 
         await LoadDecksAsync();
+        ApplyDeckSelectionFromQuery();
+    }
+
+    private void ApplyDeckSelectionFromQuery()
+    {
+        if (!DeckId.HasValue || DeckId.Value == Guid.Empty)
+        {
+            return;
+        }
+
+        if (decks.Count == 0)
+        {
+            decksErrorMessage = "Wybrany zestaw nie istnieje lub nie jest dostêpny.";
+            return;
+        }
+
+        var matchingDeck = decks.FirstOrDefault(deck => deck.Id == DeckId.Value);
+        if (matchingDeck is null)
+        {
+            decksErrorMessage = "Wybrany zestaw nie istnieje lub nie jest dostêpny.";
+            return;
+        }
+
+        deckSelection = new DeckSelectionViewModel
+        {
+            Mode = DeckSelectionMode.Existing,
+            SelectedDeckId = matchingDeck.Id,
+            NewDeckName = null,
+        };
     }
 
     private async Task LoadDecksAsync()
@@ -193,6 +226,8 @@ public partial class GenerateFlashcards
                 HttpStatusCode.Forbidden => "Brak dostêpu do generatora fiszek.",
                 (HttpStatusCode)429 => "Limit zapytañ zosta³ przekroczony. Spróbuj ponownie póŸniej.",
                 HttpStatusCode.InternalServerError => "Wyst¹pi³ b³¹d serwera podczas generowania fiszek.",
+                HttpStatusCode.BadGateway or HttpStatusCode.ServiceUnavailable or HttpStatusCode.GatewayTimeout
+                    => "Us³uga generowania jest chwilowo niedostêpna. Spróbuj ponownie póŸniej.",
                 _ => exception.Message,
             };
         }

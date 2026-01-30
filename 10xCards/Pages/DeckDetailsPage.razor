@@ -4,6 +4,7 @@
 @using _10xCards.Components.DeckDetails
 @using _10xCards.Components.Shared
 @using _10xCards.Models
+@inject NavigationManager NavigationManager
 
 <PageTitle>Szczegó³y zestawu</PageTitle>
 
@@ -52,6 +53,13 @@ else
 
     private async Task ShowCreateModal()
     {
+        if (DeckId == Guid.Empty)
+        {
+            await Task.CompletedTask;
+            return;
+        }
+
+        NavigationManager.NavigateTo($"/generate?deckId={DeckId}");
         await Task.CompletedTask;
     }
 

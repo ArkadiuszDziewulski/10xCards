@@ -4,6 +4,8 @@
 
 Widok `Generator fiszek AI` umo¿liwia wklejenie tekstu Ÿród³owego (1 000–10 000 znaków), wygenerowanie propozycji fiszek przez LLM, ich edycjê oraz zapis do wybranego zestawu.
 
+Widok mo¿e zostaæ otwarty z poziomu szczegó³ów zestawu (`/decks/{deckId}`) przez akcjê `Dodaj fiszkê`. W takim przypadku wybór zestawu jest wstêpnie ustawiany na przekazany identyfikator.
+
 ## G³ówne elementy
 
 - `SourceInput` z licznikiem znaków i walidacj¹ d³ugoœci.
