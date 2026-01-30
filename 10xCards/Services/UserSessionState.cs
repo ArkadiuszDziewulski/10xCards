@@ -28,14 +28,28 @@ public sealed class UserSessionState
             return;
         }
 
-        var email = supabaseClient.Auth.CurrentUser?.Email;
-        if (string.IsNullOrWhiteSpace(email))
+        var session = supabaseClient.Auth.CurrentSession;
+        if (session is null || string.IsNullOrWhiteSpace(session.AccessToken))
         {
             ClearSession();
             return;
         }
 
+        var email = session.User?.Email ?? supabaseClient.Auth.CurrentUser?.Email;
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            SetAuthenticatedWithoutEmail();
+            return;
+        }
+
         SetAuthenticated(email);
+    }
+
+    private void SetAuthenticatedWithoutEmail()
+    {
+        UserEmail = null;
+        IsAuthenticated = true;
+        NotifyStateChanged();
     }
 
     private void NotifyStateChanged()

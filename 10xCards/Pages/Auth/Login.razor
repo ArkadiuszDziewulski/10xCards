@@ -2,6 +2,7 @@
 @page "/auth/login"
 @layout AuthLayout
 @inject SupabaseAuthService SupabaseAuthService
+@inject UserSessionState UserSessionState
 @inject NavigationManager NavigationManager
 
 <PageTitle>Logowanie</PageTitle>
@@ -51,6 +52,18 @@
     private bool isSubmitting;
     private string? errorMessage;
     private string? infoMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await SupabaseAuthService.EnsureInitializedAsync();
+
+        if (!UserSessionState.IsAuthenticated)
+        {
+            return;
+        }
+
+        NavigationManager.NavigateTo("/decks");
+    }
 
     private async Task HandleValidSubmit(EditContext editContext)
     {
