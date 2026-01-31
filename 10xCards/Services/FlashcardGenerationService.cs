@@ -1,8 +1,9 @@
-using System.Net;
-using System.Text.Json;
 using _10xCards.Models;
 using Supabase;
 using Supabase.Functions;
+using System.Net;
+using System.Text.Json;
+using static Supabase.Functions.Client;
 
 namespace _10xCards.Services;
 
@@ -54,10 +55,17 @@ public sealed class FlashcardGenerationService
             { "text", request.Text },
             { "amount", request.Amount }
         };
+
+        var options = new InvokeFunctionOptions
+        {
+            Body = body
+        };
+
         var jsonBody = JsonSerializer.Serialize(body);
         try
         {
-            var response = await supabase.Functions.Invoke<GenerateFlashcardsResponse>("generate-flashcards", jsonBody);
+            var response = await supabase.Functions.Invoke<GenerateFlashcardsResponse>("generate-flashcards", options: options);
+
             if (response == null)
             {
                 throw new FlashcardGenerationException("Empty response from generation endpoint.", HttpStatusCode.NoContent);
