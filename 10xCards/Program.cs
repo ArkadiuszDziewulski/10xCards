@@ -10,7 +10,8 @@ builder.RootComponents.Add<HeadOutlet>("head::after");
 
 var url = builder.Configuration["Supabase:Url"] ?? "";
 var key = builder.Configuration["Supabase:Key"] ?? "";
-builder.Services.AddScoped(_ => new Supabase.Client(url, key, new SupabaseOptions { AutoConnectRealtime = true }));
+builder.Services.AddScoped(_ => new Supabase.Client(url, key, new SupabaseOptions { AutoConnectRealtime = true,
+    AutoRefreshToken = true}));
 builder.Services.AddScoped<UserSessionState>();
 builder.Services.AddScoped<SupabaseAuthService>();
 
