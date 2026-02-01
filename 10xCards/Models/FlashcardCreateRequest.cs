@@ -7,6 +7,9 @@ public sealed record FlashcardCreateRequest
     [JsonPropertyName("deck_id")]
     public Guid DeckId { get; init; }
 
+    [JsonPropertyName("user_id")]
+    public Guid UserId { get; init; }
+
     [JsonPropertyName("front")]
     public required string Front { get; init; }
 

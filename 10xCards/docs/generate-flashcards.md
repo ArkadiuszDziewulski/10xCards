@@ -17,5 +17,6 @@ Widok mo¿e zostaæ otwarty z poziomu szczegó³ów zestawu (`/decks/{deckId}`) przez
 ## Przep³yw zapisu
 
 1. U¿ytkownik wybiera istniej¹cy zestaw lub podaje nazwê nowego.
-2. Zaakceptowane fiszki s¹ zapisywane przez `FlashcardsApiClient`.
-3. Po zapisie aplikacja przekierowuje do `/decks/{deckId}`.
+2. Wygenerowane fiszki s¹ zapisywane dopiero po akceptacji u¿ytkownika.
+3. Zaakceptowane fiszki s¹ zapisywane przez `FlashcardsApiClient`.
+4. Po zapisie aplikacja przekierowuje do `/decks/{deckId}`.

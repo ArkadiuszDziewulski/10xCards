@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using _10xCards.Models;
 
 namespace _10xCards.Services;
@@ -33,6 +34,7 @@ public sealed class FlashcardsApiClient
         new()
         {
             PropertyNameCaseInsensitive = true,
+            Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) },
         };
 
     public FlashcardsApiClient(HttpClient httpClient, IConfiguration configuration, ILogger<FlashcardsApiClient> logger)
@@ -126,6 +128,11 @@ public sealed class FlashcardsApiClient
             throw new FlashcardsApiException("At least one flashcard is required.", HttpStatusCode.BadRequest);
         }
 
+        if (!TryGetUserIdFromAccessToken(accessToken, out var userId))
+        {
+            throw new FlashcardsApiException("Invalid access token.", HttpStatusCode.Unauthorized);
+        }
+
         var sanitizedFlashcards = new List<FlashcardCreateRequest>(command.Flashcards.Count);
         foreach (var flashcard in command.Flashcards)
         {
@@ -157,6 +164,7 @@ public sealed class FlashcardsApiClient
             sanitizedFlashcards.Add(new FlashcardCreateRequest
             {
                 DeckId = flashcard.DeckId,
+                UserId = userId,
                 Front = flashcard.Front.Trim(),
                 Back = flashcard.Back.Trim(),
                 Status = flashcard.Status,
@@ -423,6 +431,72 @@ public sealed class FlashcardsApiClient
         var query =
             $"deck_id=eq.{Uri.EscapeDataString(deckId.ToString())}&select={Uri.EscapeDataString(select)}";
         return $"{baseUrl}/rest/v1/flashcards?{query}";
+    }
+
+    private static bool TryGetUserIdFromAccessToken(string accessToken, out Guid userId)
+    {
+        userId = Guid.Empty;
+
+        if (string.IsNullOrWhiteSpace(accessToken))
+        {
+            return false;
+        }
+
+        var parts = accessToken.Split('.', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (parts.Length < 2)
+        {
+            return false;
+        }
+
+        try
+        {
+            var payloadBytes = DecodeBase64Url(parts[1]);
+            using var payloadJson = JsonDocument.Parse(payloadBytes);
+            if (TryGetGuidClaim(payloadJson.RootElement, "sub", out userId))
+            {
+                return true;
+            }
+
+            return TryGetGuidClaim(payloadJson.RootElement, "user_id", out userId);
+        }
+        catch (FormatException)
+        {
+            return false;
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+    }
+
+    private static bool TryGetGuidClaim(JsonElement payload, string claimName, out Guid userId)
+    {
+        userId = Guid.Empty;
+
+        if (!payload.TryGetProperty(claimName, out var claimValue))
+        {
+            return false;
+        }
+
+        if (claimValue.ValueKind != JsonValueKind.String)
+        {
+            return false;
+        }
+
+        var claimText = claimValue.GetString();
+        return Guid.TryParse(claimText, out userId);
+    }
+
+    private static byte[] DecodeBase64Url(string value)
+    {
+        var normalized = value.Replace('-', '+').Replace('_', '/');
+        var paddingNeeded = normalized.Length % 4;
+        if (paddingNeeded > 0)
+        {
+            normalized = normalized.PadRight(normalized.Length + (4 - paddingNeeded), '=');
+        }
+
+        return Convert.FromBase64String(normalized);
     }
 
     private string BuildDueRequestUri(string select, int? limit, int? offset)

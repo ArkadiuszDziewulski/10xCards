@@ -9,6 +9,7 @@ Creates flashcards in Supabase REST for the current user. Supports batch inserts
 - Body: JSON array of flashcards
   - Required fields: `deck_id`, `front`, `back`
   - Optional fields: `status` (`active` or `draft`)
+  - `user_id` is set by the client from the access token to satisfy RLS policies
 - Headers:
   - `Authorization: Bearer {token}` (required)
   - `Prefer: return=representation` (optional, default) or `return=minimal`

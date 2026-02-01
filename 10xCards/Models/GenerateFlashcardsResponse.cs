@@ -11,5 +11,5 @@ public sealed record GenerateFlashcardsResponse
     public required IReadOnlyList<GeneratedFlashcardDto> Flashcards { get; init; }
 
     [JsonPropertyName("generationId")]
-    public Guid GenerationId { get; init; }
+    public Guid? GenerationId { get; init; }
 }

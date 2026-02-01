@@ -1,6 +1,5 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import type { TablesInsert } from "../../../10xCards/ai/Model.types.ts";
 import {
     FlashcardGenerationError,
     generateFlashcards,
@@ -101,31 +100,10 @@ serve(async (request) => {
             timeoutMs: Number.isFinite(openRouterTimeoutMs) ? openRouterTimeoutMs : 30000,
         });
 
-        const generationEvent: TablesInsert<"generation_events"> = {
-            user_id: userData.user.id,
-            input_length: payload.text.length,
-            total_generated_count: flashcards.length,
-            accepted_count: 0,
-        };
-
-        const { data: eventData, error: eventError } = await supabaseClient
-            .from("generation_events")
-            .insert(generationEvent)
-            .select("id")
-            .single();
-
-        if (eventError || !eventData) {
-            return new Response(JSON.stringify({ message: "Failed to save generation event." }), {
-                status: 500,
-                headers: jsonHeaders,
-            });
-        }
-
         return new Response(
             JSON.stringify({
                 success: true,
                 flashcards,
-                generationId: eventData.id,
             }),
             { status: 201, headers: jsonHeaders },
         );
