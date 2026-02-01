@@ -1,3 +1,4 @@
 <Solution>
+  <Project Path="10xCards.Tests/10xCards.Tests.csproj" />
   <Project Path="10xCards/10xCards.csproj" />
 </Solution>

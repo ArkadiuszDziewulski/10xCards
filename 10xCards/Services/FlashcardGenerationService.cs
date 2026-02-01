@@ -3,7 +3,6 @@ using Supabase;
 using Supabase.Functions;
 using System.Net;
 using System.Text.Json;
-using static Supabase.Functions.Client;
 
 namespace _10xCards.Services;
 
@@ -14,14 +13,22 @@ public sealed class FlashcardGenerationService
         PropertyNameCaseInsensitive = true,
     };
 
-    private readonly Supabase.Client supabase;
+    private readonly IFunctionsInvoker functionsInvoker;
     private readonly ILogger<FlashcardGenerationService> logger;
 
     public FlashcardGenerationService(
         Supabase.Client supabase,
         ILogger<FlashcardGenerationService> logger)
     {
-        this.supabase = supabase;
+        functionsInvoker = new SupabaseFunctionsInvoker(supabase);
+        this.logger = logger;
+    }
+
+    public FlashcardGenerationService(
+        IFunctionsInvoker functionsInvoker,
+        ILogger<FlashcardGenerationService> logger)
+    {
+        this.functionsInvoker = functionsInvoker;
         this.logger = logger;
     }
 
@@ -56,7 +63,7 @@ public sealed class FlashcardGenerationService
             { "amount", request.Amount }
         };
 
-        var options = new InvokeFunctionOptions
+        var options = new Supabase.Functions.Client.InvokeFunctionOptions
         {
             Body = body
         };
@@ -64,7 +71,10 @@ public sealed class FlashcardGenerationService
         var jsonBody = JsonSerializer.Serialize(body);
         try
         {
-            var response = await supabase.Functions.Invoke<GenerateFlashcardsResponse>("generate-flashcards", options: options);
+            var response = await functionsInvoker.InvokeAsync<GenerateFlashcardsResponse>(
+                "generate-flashcards",
+                options,
+                cancellationToken);
 
             if (response == null)
             {
