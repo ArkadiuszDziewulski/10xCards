@@ -3,9 +3,14 @@
         <h1 class="mb-1">@DeckName</h1>
         <div class="text-muted">Zarz¹dzaj fiszkami w tym zestawie</div>
     </div>
-    <button class="btn btn-primary" type="button" @onclick="OnCreateRequested">
-        Dodaj fiszkê
-    </button>
+    <div class="d-flex gap-2">
+        <button class="btn btn-outline-primary" type="button" @onclick="OnGenerateRequested">
+            Generuj fiszki
+        </button>
+        <button class="btn btn-primary" type="button" @onclick="OnCreateRequested">
+            Dodaj fiszkê
+        </button>
+    </div>
 </div>
 
 @code {
@@ -14,4 +19,7 @@
 
     [Parameter]
     public EventCallback OnCreateRequested { get; set; }
+
+    [Parameter]
+    public EventCallback OnGenerateRequested { get; set; }
 }

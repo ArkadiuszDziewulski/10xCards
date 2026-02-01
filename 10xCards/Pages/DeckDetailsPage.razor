@@ -1,14 +1,24 @@
 @page "/decks/{DeckId:guid}"
 @attribute [Authorize]
+@using System.Net
 @using Microsoft.AspNetCore.Authorization
+@using _10xCards.Components.Dashboard
 @using _10xCards.Components.DeckDetails
 @using _10xCards.Components.Shared
 @using _10xCards.Models
+@using _10xCards.Services
+@inject DecksApiClient DecksApiClient
+@inject FlashcardsApiClient FlashcardsApiClient
+@inject SupabaseAuthService SupabaseAuthService
+@inject Supabase.Client SupabaseClient
+@inject UserSessionState UserSessionState
 @inject NavigationManager NavigationManager
 
 <PageTitle>Szczegó³y zestawu</PageTitle>
 
-<DeckHeader DeckName="@deckName" OnCreateRequested="ShowCreateModal" />
+<DeckHeader DeckName="@deckName"
+            OnCreateRequested="ShowCreateModal"
+            OnGenerateRequested="ShowGenerateView" />
 
 @if (isLoading)
 {
@@ -28,6 +38,9 @@ else if (flashcards.Count == 0)
 {
     <div class="alert alert-info">
         Brak fiszek w tym zestawie. Dodaj pierwsz¹ fiszkê, aby rozpocz¹æ naukê.
+        <div class="mt-3">
+            <button class="btn btn-primary" type="button" @onclick="ShowCreateModal">Dodaj fiszkê</button>
+        </div>
     </div>
 }
 else
@@ -39,41 +52,377 @@ else
                     OnPageChanged="HandlePageChanged" />
 }
 
+<FlashcardCreateModal IsOpen="isCreateModalOpen"
+                      DeckId="DeckId"
+                      OnSubmit="HandleCreateSubmitted"
+                      OnCancel="CloseCreateModal"
+                      IsBusy="isSaving" />
+
+<FlashcardEditorModal IsOpen="isEditModalOpen"
+                      Model="editFormModel"
+                      OnSubmit="HandleEditSubmitted"
+                      OnCancel="CloseEditModal"
+                      IsBusy="isSaving" />
+
+<DeleteConfirmationModal IsOpen="isDeleteModalOpen"
+                         Title="Usuñ fiszkê"
+                         Message="Czy na pewno chcesz usun¹æ tê fiszkê?"
+                         OnConfirm="HandleDeleteConfirmed"
+                         OnCancel="CloseDeleteModal"
+                         IsBusy="isSaving" />
+
 @code {
     [Parameter]
     public Guid DeckId { get; set; }
 
     private string deckName = "";
     private bool isLoading = true;
+    private bool isSaving;
     private string? errorMessage;
     private readonly List<FlashcardViewModel> flashcards = new();
     private PaginationState pagination = new() { PageSize = 10, CurrentPage = 1, TotalItems = 0 };
+    private FlashcardViewModel? selectedFlashcard;
+    private FlashcardFormModel editFormModel = new();
+    private bool isCreateModalOpen;
+    private bool isEditModalOpen;
+    private bool isDeleteModalOpen;
 
-    private IReadOnlyList<FlashcardViewModel> PagedFlashcards => flashcards;
-
-    private async Task ShowCreateModal()
+    private IReadOnlyList<FlashcardViewModel> PagedFlashcards
     {
-        if (DeckId == Guid.Empty)
+        get
         {
-            await Task.CompletedTask;
+            if (pagination.PageSize <= 0)
+            {
+                return flashcards;
+            }
+
+            var startIndex = (pagination.CurrentPage - 1) * pagination.PageSize;
+            return flashcards.Skip(startIndex).Take(pagination.PageSize).ToList();
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await SupabaseAuthService.EnsureInitializedAsync();
+
+        if (!UserSessionState.IsAuthenticated)
+        {
+            NavigationManager.NavigateTo("/auth/login");
             return;
         }
 
+        await LoadDeckDetailsAsync();
+    }
+
+    private async Task LoadDeckDetailsAsync()
+    {
+        if (DeckId == Guid.Empty)
+        {
+            errorMessage = "Nieprawid³owy identyfikator zestawu.";
+            isLoading = false;
+            return;
+        }
+
+        errorMessage = null;
+        isLoading = true;
+        flashcards.Clear();
+
+        var accessToken = SupabaseClient.Auth.CurrentSession?.AccessToken;
+        if (string.IsNullOrWhiteSpace(accessToken))
+        {
+            errorMessage = "Brak aktywnej sesji. Zaloguj siê, aby zobaczyæ zestaw.";
+            isLoading = false;
+            return;
+        }
+
+        try
+        {
+            var deck = await DecksApiClient.GetDeckByIdAsync(accessToken, DeckId);
+            deckName = deck.Name;
+
+            var flashcardDtos = await FlashcardsApiClient.GetByDeckIdAsync(accessToken, DeckId, "*");
+            flashcards.AddRange(flashcardDtos.Select(MapFlashcard));
+            UpdatePagination();
+        }
+        catch (DecksApiException exception)
+        {
+            errorMessage = exception.StatusCode switch
+            {
+                HttpStatusCode.Unauthorized => "Sesja wygas³a. Zaloguj siê ponownie.",
+                HttpStatusCode.Forbidden => "Brak dostêpu do zestawu.",
+                HttpStatusCode.NotFound => "Nie znaleziono zestawu.",
+                _ => exception.Message,
+            };
+        }
+        catch (FlashcardsApiException exception)
+        {
+            errorMessage = exception.StatusCode switch
+            {
+                HttpStatusCode.Unauthorized => "Sesja wygas³a. Zaloguj siê ponownie.",
+                HttpStatusCode.Forbidden => "Brak dostêpu do fiszek.",
+                HttpStatusCode.NotFound => "Nie znaleziono fiszek w zestawie.",
+                _ => exception.Message,
+            };
+        }
+        catch (Exception exception)
+        {
+            errorMessage = $"Nieoczekiwany b³¹d: {exception.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void UpdatePagination()
+    {
+        var pageSize = pagination.PageSize <= 0 ? 10 : pagination.PageSize;
+        var totalItems = flashcards.Count;
+        var totalPages = Math.Max(1, (int)Math.Ceiling((double)totalItems / pageSize));
+        var currentPage = Math.Clamp(pagination.CurrentPage, 1, totalPages);
+
+        pagination = new PaginationState
+        {
+            PageSize = pageSize,
+            CurrentPage = currentPage,
+            TotalItems = totalItems,
+        };
+    }
+
+    private Task ShowCreateModal()
+    {
+        if (DeckId == Guid.Empty)
+        {
+            errorMessage = "Nieprawid³owy identyfikator zestawu.";
+            return Task.CompletedTask;
+        }
+
+        errorMessage = null;
+        isCreateModalOpen = true;
+        return Task.CompletedTask;
+    }
+
+    private Task ShowGenerateView()
+    {
+        if (DeckId == Guid.Empty)
+        {
+            errorMessage = "Nieprawid³owy identyfikator zestawu.";
+            return Task.CompletedTask;
+        }
+
         NavigationManager.NavigateTo($"/generate?deckId={DeckId}");
-        await Task.CompletedTask;
+        return Task.CompletedTask;
     }
 
-    private async Task HandleEditRequested(FlashcardViewModel flashcard)
+    private async Task HandleCreateSubmitted(FlashcardFormModel model)
     {
-        await Task.CompletedTask;
+        if (isSaving)
+        {
+            return;
+        }
+
+        var accessToken = SupabaseClient.Auth.CurrentSession?.AccessToken;
+        if (string.IsNullOrWhiteSpace(accessToken))
+        {
+            errorMessage = "Brak aktywnej sesji. Zaloguj siê ponownie.";
+            return;
+        }
+
+        isSaving = true;
+        errorMessage = null;
+
+        try
+        {
+            var command = new CreateFlashcardsCommand(
+                new List<FlashcardCreateRequest>
+                {
+                    new()
+                    {
+                        DeckId = DeckId,
+                        Front = model.Front.Trim(),
+                        Back = model.Back.Trim(),
+                        Status = model.Status,
+                    },
+                });
+
+            await FlashcardsApiClient.CreateAsync(accessToken, command, true);
+            isCreateModalOpen = false;
+            await LoadDeckDetailsAsync();
+        }
+        catch (FlashcardsApiException exception)
+        {
+            errorMessage = exception.StatusCode switch
+            {
+                HttpStatusCode.BadRequest => "Wype³nij poprawnie pola fiszki.",
+                HttpStatusCode.Unauthorized => "Sesja wygas³a. Zaloguj siê ponownie.",
+                HttpStatusCode.Forbidden => "Brak dostêpu do fiszek.",
+                HttpStatusCode.NotFound => "Nie znaleziono zestawu.",
+                HttpStatusCode.Conflict => "Nie uda³o siê dodaæ fiszki. Spróbuj ponownie.",
+                _ => exception.Message,
+            };
+        }
+        catch (Exception exception)
+        {
+            errorMessage = $"Nieoczekiwany b³¹d: {exception.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+        }
     }
 
-    private async Task HandleDeleteRequested(FlashcardViewModel flashcard)
+    private Task CloseCreateModal()
     {
-        await Task.CompletedTask;
+        isCreateModalOpen = false;
+        return Task.CompletedTask;
     }
 
-    private async Task HandlePageChanged(int page)
+    private Task HandleEditRequested(FlashcardViewModel flashcard)
+    {
+        selectedFlashcard = flashcard;
+        editFormModel = new FlashcardFormModel
+        {
+            Front = flashcard.Front,
+            Back = flashcard.Back,
+            Status = flashcard.Status,
+        };
+        errorMessage = null;
+        isEditModalOpen = true;
+        return Task.CompletedTask;
+    }
+
+    private async Task HandleEditSubmitted(FlashcardFormModel model)
+    {
+        if (isSaving)
+        {
+            return;
+        }
+
+        if (selectedFlashcard is null)
+        {
+            errorMessage = "Nie wybrano fiszki do edycji.";
+            return;
+        }
+
+        var accessToken = SupabaseClient.Auth.CurrentSession?.AccessToken;
+        if (string.IsNullOrWhiteSpace(accessToken))
+        {
+            errorMessage = "Brak aktywnej sesji. Zaloguj siê ponownie.";
+            return;
+        }
+
+        isSaving = true;
+        errorMessage = null;
+
+        try
+        {
+            var command = new UpdateFlashcardContentCommand
+            {
+                Front = model.Front.Trim(),
+                Back = model.Back.Trim(),
+                Status = model.Status,
+            };
+
+            await FlashcardsApiClient.UpdateContentAsync(accessToken, selectedFlashcard.Id, command);
+            isEditModalOpen = false;
+            selectedFlashcard = null;
+            await LoadDeckDetailsAsync();
+        }
+        catch (FlashcardsApiException exception)
+        {
+            errorMessage = exception.StatusCode switch
+            {
+                HttpStatusCode.BadRequest => "Wype³nij poprawnie pola fiszki.",
+                HttpStatusCode.Unauthorized => "Sesja wygas³a. Zaloguj siê ponownie.",
+                HttpStatusCode.Forbidden => "Brak dostêpu do fiszek.",
+                HttpStatusCode.NotFound => "Nie znaleziono fiszki.",
+                _ => exception.Message,
+            };
+        }
+        catch (Exception exception)
+        {
+            errorMessage = $"Nieoczekiwany b³¹d: {exception.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private Task CloseEditModal()
+    {
+        isEditModalOpen = false;
+        selectedFlashcard = null;
+        return Task.CompletedTask;
+    }
+
+    private Task HandleDeleteRequested(FlashcardViewModel flashcard)
+    {
+        selectedFlashcard = flashcard;
+        errorMessage = null;
+        isDeleteModalOpen = true;
+        return Task.CompletedTask;
+    }
+
+    private async Task HandleDeleteConfirmed()
+    {
+        if (isSaving)
+        {
+            return;
+        }
+
+        if (selectedFlashcard is null)
+        {
+            errorMessage = "Nie wybrano fiszki do usuniêcia.";
+            return;
+        }
+
+        var accessToken = SupabaseClient.Auth.CurrentSession?.AccessToken;
+        if (string.IsNullOrWhiteSpace(accessToken))
+        {
+            errorMessage = "Brak aktywnej sesji. Zaloguj siê ponownie.";
+            return;
+        }
+
+        isSaving = true;
+        errorMessage = null;
+
+        try
+        {
+            await FlashcardsApiClient.DeleteAsync(accessToken, selectedFlashcard.Id);
+            isDeleteModalOpen = false;
+            selectedFlashcard = null;
+            await LoadDeckDetailsAsync();
+        }
+        catch (FlashcardsApiException exception)
+        {
+            errorMessage = exception.StatusCode switch
+            {
+                HttpStatusCode.BadRequest => "Nieprawid³owy identyfikator fiszki.",
+                HttpStatusCode.Unauthorized => "Sesja wygas³a. Zaloguj siê ponownie.",
+                HttpStatusCode.Forbidden => "Brak dostêpu do fiszek.",
+                HttpStatusCode.NotFound => "Nie znaleziono fiszki.",
+                _ => exception.Message,
+            };
+        }
+        catch (Exception exception)
+        {
+            errorMessage = $"Nieoczekiwany b³¹d: {exception.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private Task CloseDeleteModal()
+    {
+        isDeleteModalOpen = false;
+        selectedFlashcard = null;
+        return Task.CompletedTask;
+    }
+
+    private Task HandlePageChanged(int page)
     {
         pagination = new PaginationState
         {
@@ -82,6 +431,19 @@ else
             TotalItems = pagination.TotalItems,
         };
 
-        await Task.CompletedTask;
+        return Task.CompletedTask;
+    }
+
+    private static FlashcardViewModel MapFlashcard(FlashcardDto dto)
+    {
+        return new FlashcardViewModel
+        {
+            Id = dto.Id,
+            DeckId = dto.DeckId,
+            Front = dto.Front,
+            Back = dto.Back,
+            Status = dto.Status,
+            UpdatedAt = dto.UpdatedAt,
+        };
     }
 }

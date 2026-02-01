@@ -236,6 +236,182 @@ public sealed class FlashcardsApiClient
         return createdFlashcards;
     }
 
+    public async Task UpdateContentAsync(
+        string accessToken,
+        Guid flashcardId,
+        UpdateFlashcardContentCommand command,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(accessToken))
+        {
+            throw new FlashcardsApiException("Access token is required.", HttpStatusCode.Unauthorized);
+        }
+
+        if (flashcardId == Guid.Empty)
+        {
+            throw new FlashcardsApiException("Flashcard id is required.", HttpStatusCode.BadRequest);
+        }
+
+        if (command is null)
+        {
+            throw new FlashcardsApiException("Request body is required.", HttpStatusCode.BadRequest);
+        }
+
+        string? trimmedFront = null;
+        string? trimmedBack = null;
+        FlashcardStatus? status = null;
+        var hasChanges = false;
+
+        if (command.Front is not null)
+        {
+            trimmedFront = command.Front.Trim();
+            if (string.IsNullOrWhiteSpace(trimmedFront))
+            {
+                throw new FlashcardsApiException("Front content is required.", HttpStatusCode.BadRequest);
+            }
+
+            hasChanges = true;
+        }
+
+        if (command.Back is not null)
+        {
+            trimmedBack = command.Back.Trim();
+            if (string.IsNullOrWhiteSpace(trimmedBack))
+            {
+                throw new FlashcardsApiException("Back content is required.", HttpStatusCode.BadRequest);
+            }
+
+            hasChanges = true;
+        }
+
+        if (command.Status is not null)
+        {
+            if (!Enum.IsDefined(command.Status.Value))
+            {
+                throw new FlashcardsApiException("Status must be either active or draft.", HttpStatusCode.BadRequest);
+            }
+
+            status = command.Status;
+            hasChanges = true;
+        }
+
+        if (!hasChanges)
+        {
+            throw new FlashcardsApiException("At least one field must be provided.", HttpStatusCode.BadRequest);
+        }
+
+        var sanitizedCommand = new UpdateFlashcardContentCommand
+        {
+            Front = trimmedFront,
+            Back = trimmedBack,
+            Status = status,
+        };
+
+        if (string.IsNullOrWhiteSpace(supabaseUrl))
+        {
+            throw new InvalidOperationException("Supabase Url is not configured.");
+        }
+
+        var baseUrl = supabaseUrl.TrimEnd('/');
+        var requestUri =
+            $"{baseUrl}/rest/v1/flashcards?id=eq.{Uri.EscapeDataString(flashcardId.ToString())}";
+
+        using var requestMessage = new HttpRequestMessage(HttpMethod.Patch, requestUri);
+        requestMessage.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+        requestMessage.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+        requestMessage.Headers.TryAddWithoutValidation("Prefer", "return=minimal");
+        requestMessage.Content = new StringContent(
+            JsonSerializer.Serialize(sanitizedCommand, jsonOptions),
+            Encoding.UTF8,
+            "application/json");
+
+        using var response = await httpClient.SendAsync(requestMessage, cancellationToken);
+        if (response.StatusCode == HttpStatusCode.Unauthorized)
+        {
+            throw new FlashcardsApiException("Unauthorized request.", response.StatusCode);
+        }
+
+        if (!response.IsSuccessStatusCode)
+        {
+            var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
+            var message = response.StatusCode switch
+            {
+                HttpStatusCode.BadRequest => "Invalid flashcard update payload.",
+                HttpStatusCode.Forbidden => "Access to flashcards is forbidden.",
+                HttpStatusCode.NotFound => "Flashcard not found.",
+                HttpStatusCode.InternalServerError => "Server error while updating flashcard.",
+                _ => "Failed to update flashcard.",
+            };
+
+            logger.LogWarning(
+                "Failed to update flashcard content. Status: {StatusCode}. Response: {Response}",
+                response.StatusCode,
+                errorContent);
+
+            throw new FlashcardsApiException(
+                string.IsNullOrWhiteSpace(errorContent) ? message : $"{message} {errorContent}",
+                response.StatusCode);
+        }
+    }
+
+    public async Task DeleteAsync(
+        string accessToken,
+        Guid flashcardId,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(accessToken))
+        {
+            throw new FlashcardsApiException("Access token is required.", HttpStatusCode.Unauthorized);
+        }
+
+        if (flashcardId == Guid.Empty)
+        {
+            throw new FlashcardsApiException("Flashcard id is required.", HttpStatusCode.BadRequest);
+        }
+
+        if (string.IsNullOrWhiteSpace(supabaseUrl))
+        {
+            throw new InvalidOperationException("Supabase Url is not configured.");
+        }
+
+        var baseUrl = supabaseUrl.TrimEnd('/');
+        var requestUri =
+            $"{baseUrl}/rest/v1/flashcards?id=eq.{Uri.EscapeDataString(flashcardId.ToString())}";
+
+        using var requestMessage = new HttpRequestMessage(HttpMethod.Delete, requestUri);
+        requestMessage.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+        requestMessage.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+        requestMessage.Headers.TryAddWithoutValidation("Prefer", "return=minimal");
+
+        using var response = await httpClient.SendAsync(requestMessage, cancellationToken);
+        if (response.StatusCode == HttpStatusCode.Unauthorized)
+        {
+            throw new FlashcardsApiException("Unauthorized request.", response.StatusCode);
+        }
+
+        if (!response.IsSuccessStatusCode)
+        {
+            var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
+            var message = response.StatusCode switch
+            {
+                HttpStatusCode.BadRequest => "Invalid flashcard identifier.",
+                HttpStatusCode.Forbidden => "Access to flashcards is forbidden.",
+                HttpStatusCode.NotFound => "Flashcard not found.",
+                HttpStatusCode.InternalServerError => "Server error while deleting flashcard.",
+                _ => "Failed to delete flashcard.",
+            };
+
+            logger.LogWarning(
+                "Failed to delete flashcard. Status: {StatusCode}. Response: {Response}",
+                response.StatusCode,
+                errorContent);
+
+            throw new FlashcardsApiException(
+                string.IsNullOrWhiteSpace(errorContent) ? message : $"{message} {errorContent}",
+                response.StatusCode);
+        }
+    }
+
     public async Task UpdateSrsAsync(
         string accessToken,
         Guid flashcardId,

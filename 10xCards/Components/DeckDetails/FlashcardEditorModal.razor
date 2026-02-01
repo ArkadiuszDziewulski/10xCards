@@ -1,0 +1,107 @@
+@using _10xCards.Models
+
+@if (IsOpen)
+{
+    <div class="modal fade show d-block" tabindex="-1" role="dialog" aria-modal="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <EditForm Model="formModel" OnValidSubmit="HandleValidSubmit">
+                    <DataAnnotationsValidator />
+                    <div class="modal-header">
+                        <h5 class="modal-title">Edytuj fiszkê</h5>
+                        <button type="button" class="btn-close" aria-label="Zamknij" @onclick="HandleCancel" disabled="@IsBusy"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label" for="flashcardEditFront">Przód</label>
+                            <InputTextArea id="flashcardEditFront" class="form-control" rows="3" @bind-Value="formModel.Front" disabled="@IsBusy" />
+                            <ValidationMessage For="() => formModel.Front" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="flashcardEditBack">Ty³</label>
+                            <InputTextArea id="flashcardEditBack" class="form-control" rows="3" @bind-Value="formModel.Back" disabled="@IsBusy" />
+                            <ValidationMessage For="() => formModel.Back" />
+                        </div>
+                        <div class="mb-0">
+                            <label class="form-label" for="flashcardEditStatus">Status</label>
+                            <InputSelect id="flashcardEditStatus" class="form-select" @bind-Value="formModel.Status" disabled="@IsBusy">
+                                <option value="">Wybierz status (opcjonalnie)</option>
+                                <option value="@FlashcardStatus.Active">Aktywna</option>
+                                <option value="@FlashcardStatus.Draft">Szkic</option>
+                            </InputSelect>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" @onclick="HandleCancel" disabled="@IsBusy">Anuluj</button>
+                        <button type="submit" class="btn btn-primary" disabled="@IsBusy">Zapisz</button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop fade show"></div>
+}
+
+@code {
+    private FlashcardFormModel formModel = new();
+
+    [Parameter]
+    public bool IsOpen { get; set; }
+
+    [Parameter]
+    public FlashcardFormModel? Model { get; set; }
+
+    [Parameter]
+    public EventCallback<FlashcardFormModel> OnSubmit { get; set; }
+
+    [Parameter]
+    public EventCallback OnCancel { get; set; }
+
+    [Parameter]
+    public bool IsBusy { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        if (!IsOpen || Model is null)
+        {
+            return;
+        }
+
+        formModel = new FlashcardFormModel
+        {
+            Front = Model.Front,
+            Back = Model.Back,
+            Status = Model.Status,
+        };
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        if (IsBusy || !OnSubmit.HasDelegate)
+        {
+            return;
+        }
+
+        var trimmedFront = formModel.Front.Trim();
+        var trimmedBack = formModel.Back.Trim();
+        if (string.IsNullOrWhiteSpace(trimmedFront) || string.IsNullOrWhiteSpace(trimmedBack))
+        {
+            return;
+        }
+
+        formModel.Front = trimmedFront;
+        formModel.Back = trimmedBack;
+
+        await OnSubmit.InvokeAsync(formModel);
+    }
+
+    private async Task HandleCancel()
+    {
+        if (!OnCancel.HasDelegate)
+        {
+            return;
+        }
+
+        await OnCancel.InvokeAsync();
+    }
+}

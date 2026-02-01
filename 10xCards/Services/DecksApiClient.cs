@@ -94,6 +94,76 @@ public sealed class DecksApiClient
         return decks;
     }
 
+    public async Task<DeckDto> GetDeckByIdAsync(
+        string accessToken,
+        Guid deckId,
+        string? select = "*",
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(accessToken))
+        {
+            throw new DecksApiException("Access token is required.", HttpStatusCode.Unauthorized);
+        }
+
+        if (deckId == Guid.Empty)
+        {
+            throw new DecksApiException("Deck id is required.", HttpStatusCode.BadRequest);
+        }
+
+        if (string.IsNullOrWhiteSpace(supabaseUrl))
+        {
+            throw new InvalidOperationException("Supabase Url is not configured.");
+        }
+
+        var normalizedSelect = NormalizeSelect(select);
+        var baseUrl = supabaseUrl.TrimEnd('/');
+        var requestUri =
+            $"{baseUrl}/rest/v1/decks?id=eq.{Uri.EscapeDataString(deckId.ToString())}&select={Uri.EscapeDataString(normalizedSelect)}";
+
+        using var request = new HttpRequestMessage(HttpMethod.Get, requestUri);
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+        request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+        using var response = await httpClient.SendAsync(request, cancellationToken);
+        if (response.StatusCode == HttpStatusCode.Unauthorized)
+        {
+            throw new DecksApiException("Unauthorized request.", response.StatusCode);
+        }
+
+        if (!response.IsSuccessStatusCode)
+        {
+            var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
+            var message = response.StatusCode switch
+            {
+                HttpStatusCode.BadRequest => "Invalid deck identifier.",
+                HttpStatusCode.Forbidden => "Access to decks is forbidden.",
+                HttpStatusCode.NotFound => "Deck not found.",
+                HttpStatusCode.InternalServerError => "Server error while loading deck.",
+                _ => "Failed to load deck.",
+            };
+
+            logger.LogWarning(
+                "Failed to load deck. Status: {StatusCode}. Response: {Response}",
+                response.StatusCode,
+                errorContent);
+
+            throw new DecksApiException(
+                string.IsNullOrWhiteSpace(errorContent) ? message : $"{message} {errorContent}",
+                response.StatusCode);
+        }
+
+        await using var contentStream = await response.Content.ReadAsStreamAsync(cancellationToken);
+        var decks = await JsonSerializer.DeserializeAsync<List<DeckDto>>(contentStream, jsonOptions, cancellationToken)
+            ?? new List<DeckDto>();
+
+        if (decks.Count == 0)
+        {
+            throw new DecksApiException("Deck not found.", HttpStatusCode.NotFound);
+        }
+
+        return decks[0];
+    }
+
     public async Task<DeckDto> CreateDeckAsync(
         string accessToken,
         CreateDeckRequest request,

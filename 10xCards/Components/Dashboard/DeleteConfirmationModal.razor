@@ -25,6 +25,9 @@
     public bool IsVisible { get; set; }
 
     [Parameter]
+    public bool IsOpen { get; set; }
+
+    [Parameter]
     public string Title { get; set; } = "Usuñ zestaw";
 
     [Parameter]
@@ -35,6 +38,9 @@
 
     [Parameter]
     public EventCallback OnConfirm { get; set; }
+
+    [Parameter]
+    public bool IsBusy { get; set; }
 
     private async Task HandleCancel()
     {
