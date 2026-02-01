@@ -1,0 +1,107 @@
+<plan_testow>
+
+# Plan testów dla projektu 10xCards (Blazor WebAssembly)
+
+## 1. Wprowadzenie i cele testowania
+Celem testów jest potwierdzenie poprawnoœci dzia³ania kluczowych funkcji aplikacji Blazor WebAssembly: autoryzacji, zarz¹dzania zestawami i fiszkami, generowania fiszek AI oraz integracji z Supabase i OpenRouter. Testy maj¹ zapewniæ stabilnoœæ UI, niezawodnoœæ integracji API i poprawne obs³ugiwanie b³êdów.
+
+## 2. Zakres testów
+**W zakresie:**
+- Autoryzacja i sesja u¿ytkownika (`/auth/*`).
+- Zarz¹dzanie zestawami (`/decks`) i fiszkami (`/decks/{id}`).
+- Generator fiszek AI (`/generate`).
+- Integracje z Supabase (REST + Functions) i OpenRouter.
+- Stany ³adowania, b³êdy, paginacja, walidacje.
+
+**Poza zakresem (na tym etapie):**
+- Zaawansowana analityka i logowanie produkcyjne.
+- Testy obci¹¿eniowe na infrastrukturze produkcyjnej.
+
+## 3. Typy testów
+1. **Testy jednostkowe (NUnit 4.4.0)**
+   - `DecksApiClient`, `FlashcardsApiClient`, `OpenRouterService`, `SupabaseAuthService`.
+   - Walidacje wejœcia, mapowanie b³êdów, obs³uga wyj¹tków.
+2. **Testy komponentów (Blazor)**
+   - `Pages` i `Components` (np. `AuthForm`, `DeckList`, `FlashcardTable`).
+   - Interakcje UI i renderowanie stanów.
+3. **Testy integracyjne**
+   - Supabase REST (decks/flashcards).
+   - Supabase Functions (`generate-flashcards`).
+   - OpenRouter API.
+4. **Testy end-to-end (E2E)**
+   - Scenariusze u¿ytkownika w przegl¹darce (np. Playwright).
+5. **Testy regresji**
+   - Krytyczne œcie¿ki: logowanie, CRUD, generowanie i zapis fiszek.
+6. **Testy wydajnoœciowe (lekki profil)**
+   - Czas renderowania i obs³ugi du¿ych tekstów na stronie generatora.
+
+## 4. Scenariusze testowe kluczowych funkcjonalnoœci
+### 4.1 Autoryzacja
+- Logowanie poprawnymi danymi ? przekierowanie do `/decks`.
+- Logowanie b³êdnymi danymi ? komunikat z `SupabaseAuthService`.
+- Rejestracja z niespójnym has³em ? b³¹d walidacji.
+- Reset has³a bez tokenu ? komunikat ostrzegawczy.
+- Wygaœniêta sesja ? wymuszone logowanie przy wejœciu na strony chronione.
+
+### 4.2 Zestawy (Decks)
+- Pobranie listy zestawów bez tokenu ? komunikat b³êdu.
+- Utworzenie zestawu o prawid³owej nazwie ? pojawia siê na liœcie.
+- Utworzenie zestawu z nazw¹ zbyt d³ug¹ ? b³¹d walidacji.
+- Usuniêcie zestawu ? usuniêcie z listy i brak b³êdów.
+
+### 4.3 Fiszki (Flashcards)
+- Dodanie fiszki z pustymi polami ? b³¹d walidacji.
+- Edycja fiszki ? aktualizacja danych.
+- Usuniêcie fiszki ? znika z listy.
+- Paginacja: prze³¹czanie stron i poprawny stan `PaginationState`.
+
+### 4.4 Generator fiszek (AI)
+- Tekst < 1000 znaków ? blokada generowania.
+- Poprawny tekst ? generacja listy fiszek.
+- Brak zaakceptowanych fiszek ? blokada zapisu.
+- Zapis do istniej¹cego zestawu ? przekierowanie do `/decks/{id}`.
+- Zapis do nowego zestawu ? tworzenie zestawu + zapis fiszek.
+
+### 4.5 Integracje i b³êdy
+- Supabase: b³êdy 401/403/404/500 mapowane na komunikaty.
+- OpenRouter: retry, timeout, przekroczenie limitu.
+
+## 5. Œrodowisko testowe
+- .NET 10.0.2, Blazor WebAssembly.
+- Œrodowisko testowe Supabase (oddzielny projekt).
+- Klucze API OpenRouter w œrodowisku testowym.
+- Przegl¹darki: Chromium, Firefox, Edge.
+
+## 6. Narzêdzia do testowania
+- **NUnit 4.4.0** – testy jednostkowe.
+- **bUnit** – testy komponentów Blazor.
+- **Playwright** – testy E2E.
+- **Postman / REST Client** – testy API Supabase.
+- **GitHub Actions** – uruchamianie testów CI.
+
+## 7. Harmonogram testów
+1. **Tydzieñ 1** – testy jednostkowe serwisów i API klientów.
+2. **Tydzieñ 2** – testy komponentów UI.
+3. **Tydzieñ 3** – testy integracyjne z Supabase/OpenRouter.
+4. **Tydzieñ 4** – testy E2E i regresja.
+
+## 8. Kryteria akceptacji testów
+- 100% przejœcia krytycznych scenariuszy: logowanie, CRUD, generowanie, zapis.
+- Brak b³êdów blokuj¹cych (Severity 1).
+- Pokrycie kluczowych serwisów testami jednostkowymi min. 70%.
+
+## 9. Role i odpowiedzialnoœci
+- **QA Engineer**: przygotowanie planu, przypadków testowych, wykonanie testów.
+- **Developerzy**: wsparcie w diagnozie b³êdów i poprawki.
+- **Product Owner**: akceptacja kryteriów gotowoœci.
+
+## 10. Procedury raportowania b³êdów
+- Ka¿dy b³¹d zg³aszany w systemie œledzenia (np. GitHub Issues).
+- Minimalny zestaw informacji:
+  - kroki reprodukcji,
+  - oczekiwany vs rzeczywisty rezultat,
+  - œrodowisko,
+  - zrzuty ekranu/logi.
+- Priorytetyzacja: P1 (blokuj¹ce), P2 (istotne), P3 (kosmetyczne).
+
+</plan_testow>
