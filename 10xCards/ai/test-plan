@@ -1,107 +1,116 @@
 <plan_testow>
 
-# Plan testów dla projektu 10xCards (Blazor WebAssembly)
+# Plan testÃ³w dla projektu 10xCards (Blazor WebAssembly)
 
 ## 1. Wprowadzenie i cele testowania
-Celem testów jest potwierdzenie poprawnoœci dzia³ania kluczowych funkcji aplikacji Blazor WebAssembly: autoryzacji, zarz¹dzania zestawami i fiszkami, generowania fiszek AI oraz integracji z Supabase i OpenRouter. Testy maj¹ zapewniæ stabilnoœæ UI, niezawodnoœæ integracji API i poprawne obs³ugiwanie b³êdów.
+Celem testÃ³w jest potwierdzenie poprawnoÅ›ci dziaÅ‚ania kluczowych funkcji aplikacji Blazor WebAssembly: autoryzacji, zarzÄ…dzania zestawami i fiszkami, generowania fiszek AI oraz integracji z Supabase i OpenRouter. Testy majÄ… zapewniÄ‡ stabilnoÅ›Ä‡ UI, niezawodnoÅ›Ä‡ integracji API i poprawne obsÅ‚ugiwanie bÅ‚Ä™dÃ³w.
 
-## 2. Zakres testów
+## 2. Zakres testÃ³w
 **W zakresie:**
-- Autoryzacja i sesja u¿ytkownika (`/auth/*`).
-- Zarz¹dzanie zestawami (`/decks`) i fiszkami (`/decks/{id}`).
+- Autoryzacja i sesja uÅ¼ytkownika (`/auth/*`).
+- ZarzÄ…dzanie zestawami (`/decks`) i fiszkami (`/decks/{id}`).
 - Generator fiszek AI (`/generate`).
 - Integracje z Supabase (REST + Functions) i OpenRouter.
-- Stany ³adowania, b³êdy, paginacja, walidacje.
+- Stany Å‚adowania, bÅ‚Ä™dy, paginacja, walidacje.
 
 **Poza zakresem (na tym etapie):**
 - Zaawansowana analityka i logowanie produkcyjne.
-- Testy obci¹¿eniowe na infrastrukturze produkcyjnej.
+- Testy obciÄ…Å¼eniowe na infrastrukturze produkcyjnej.
 
-## 3. Typy testów
+## 3. Typy testÃ³w
 1. **Testy jednostkowe (NUnit 4.4.0)**
    - `DecksApiClient`, `FlashcardsApiClient`, `OpenRouterService`, `SupabaseAuthService`.
-   - Walidacje wejœcia, mapowanie b³êdów, obs³uga wyj¹tków.
-2. **Testy komponentów (Blazor)**
+   - Walidacje wejÅ›cia, mapowanie bÅ‚Ä™dÃ³w, obsÅ‚uga wyjÄ…tkÃ³w.
+2. **Testy komponentÃ³w (Blazor)**
    - `Pages` i `Components` (np. `AuthForm`, `DeckList`, `FlashcardTable`).
-   - Interakcje UI i renderowanie stanów.
+   - Interakcje UI i renderowanie stanÃ³w.
 3. **Testy integracyjne**
    - Supabase REST (decks/flashcards).
    - Supabase Functions (`generate-flashcards`).
    - OpenRouter API.
 4. **Testy end-to-end (E2E)**
-   - Scenariusze u¿ytkownika w przegl¹darce (np. Playwright).
+   - Scenariusze uÅ¼ytkownika w przeglÄ…darce (np. Playwright).
 5. **Testy regresji**
-   - Krytyczne œcie¿ki: logowanie, CRUD, generowanie i zapis fiszek.
-6. **Testy wydajnoœciowe (lekki profil)**
-   - Czas renderowania i obs³ugi du¿ych tekstów na stronie generatora.
+   - Krytyczne Å›cieÅ¼ki: logowanie, CRUD, generowanie i zapis fiszek.
+6. **Testy wydajnoÅ›ciowe (lekki profil)**
+   - Czas renderowania i obsÅ‚ugi duÅ¼ych tekstÃ³w na stronie generatora.
 
-## 4. Scenariusze testowe kluczowych funkcjonalnoœci
+## 4. Scenariusze testowe kluczowych funkcjonalnoÅ›ci
 ### 4.1 Autoryzacja
 - Logowanie poprawnymi danymi ? przekierowanie do `/decks`.
-- Logowanie b³êdnymi danymi ? komunikat z `SupabaseAuthService`.
-- Rejestracja z niespójnym has³em ? b³¹d walidacji.
-- Reset has³a bez tokenu ? komunikat ostrzegawczy.
-- Wygaœniêta sesja ? wymuszone logowanie przy wejœciu na strony chronione.
+- Logowanie bÅ‚Ä™dnymi danymi ? komunikat z `SupabaseAuthService`.
+- Rejestracja z niespÃ³jnym hasÅ‚em ? bÅ‚Ä…d walidacji.
+- Reset hasÅ‚a bez tokenu ? komunikat ostrzegawczy.
+- WygaÅ›niÄ™ta sesja ? wymuszone logowanie przy wejÅ›ciu na strony chronione.
 
 ### 4.2 Zestawy (Decks)
-- Pobranie listy zestawów bez tokenu ? komunikat b³êdu.
-- Utworzenie zestawu o prawid³owej nazwie ? pojawia siê na liœcie.
-- Utworzenie zestawu z nazw¹ zbyt d³ug¹ ? b³¹d walidacji.
-- Usuniêcie zestawu ? usuniêcie z listy i brak b³êdów.
+- Pobranie listy zestawÃ³w bez tokenu ? komunikat bÅ‚Ä™du.
+- Utworzenie zestawu o prawidÅ‚owej nazwie ? pojawia siÄ™ na liÅ›cie.
+- Utworzenie zestawu z nazwÄ… zbyt dÅ‚ugÄ… ? bÅ‚Ä…d walidacji.
+- UsuniÄ™cie zestawu ? usuniÄ™cie z listy i brak bÅ‚Ä™dÃ³w.
 
 ### 4.3 Fiszki (Flashcards)
-- Dodanie fiszki z pustymi polami ? b³¹d walidacji.
+- Dodanie fiszki z pustymi polami ? bÅ‚Ä…d walidacji.
 - Edycja fiszki ? aktualizacja danych.
-- Usuniêcie fiszki ? znika z listy.
-- Paginacja: prze³¹czanie stron i poprawny stan `PaginationState`.
+- UsuniÄ™cie fiszki ? znika z listy.
+- Paginacja: przeÅ‚Ä…czanie stron i poprawny stan `PaginationState`.
 
 ### 4.4 Generator fiszek (AI)
-- Tekst < 1000 znaków ? blokada generowania.
+- Tekst < 1000 znakÃ³w ? blokada generowania.
 - Poprawny tekst ? generacja listy fiszek.
 - Brak zaakceptowanych fiszek ? blokada zapisu.
-- Zapis do istniej¹cego zestawu ? przekierowanie do `/decks/{id}`.
+- Zapis do istniejÄ…cego zestawu ? przekierowanie do `/decks/{id}`.
 - Zapis do nowego zestawu ? tworzenie zestawu + zapis fiszek.
 
-### 4.5 Integracje i b³êdy
-- Supabase: b³êdy 401/403/404/500 mapowane na komunikaty.
+### 4.5 Integracje i bÅ‚Ä™dy
+- Supabase: bÅ‚Ä™dy 401/403/404/500 mapowane na komunikaty.
 - OpenRouter: retry, timeout, przekroczenie limitu.
 
-## 5. Œrodowisko testowe
+## 5. Åšrodowisko testowe
 - .NET 10.0.2, Blazor WebAssembly.
-- Œrodowisko testowe Supabase (oddzielny projekt).
-- Klucze API OpenRouter w œrodowisku testowym.
-- Przegl¹darki: Chromium, Firefox, Edge.
+- Åšrodowisko testowe Supabase (oddzielny projekt).
+- Klucze API OpenRouter w Å›rodowisku testowym.
+- PrzeglÄ…darki: Chromium, Firefox, Edge.
 
-## 6. Narzêdzia do testowania
-- **NUnit 4.4.0** – testy jednostkowe.
-- **bUnit** – testy komponentów Blazor.
-- **Playwright** – testy E2E.
-- **Postman / REST Client** – testy API Supabase.
-- **GitHub Actions** – uruchamianie testów CI.
+## 6. NarzÄ™dzia do testowania
+- **NUnit 4.4.0** â€“ testy jednostkowe.
+- **bUnit** â€“ testy komponentÃ³w Blazor.
+- **Playwright** â€“ testy E2E.
+- **Postman / REST Client** â€“ testy API Supabase.
+- **GitHub Actions** â€“ uruchamianie testÃ³w CI.
 
-## 7. Harmonogram testów
-1. **Tydzieñ 1** – testy jednostkowe serwisów i API klientów.
-2. **Tydzieñ 2** – testy komponentów UI.
-3. **Tydzieñ 3** – testy integracyjne z Supabase/OpenRouter.
-4. **Tydzieñ 4** – testy E2E i regresja.
+## 7. Harmonogram testÃ³w
+1. **TydzieÅ„ 1** â€“ testy jednostkowe serwisÃ³w i API klientÃ³w.
+2. **TydzieÅ„ 2** â€“ testy komponentÃ³w UI.
+3. **TydzieÅ„ 3** â€“ testy integracyjne z Supabase/OpenRouter.
+4. **TydzieÅ„ 4** â€“ testy E2E i regresja.
 
-## 8. Kryteria akceptacji testów
-- 100% przejœcia krytycznych scenariuszy: logowanie, CRUD, generowanie, zapis.
-- Brak b³êdów blokuj¹cych (Severity 1).
-- Pokrycie kluczowych serwisów testami jednostkowymi min. 70%.
+## 8. Kryteria akceptacji testÃ³w
+- 100% przejÅ›cia krytycznych scenariuszy: logowanie, CRUD, generowanie, zapis.
+- Brak bÅ‚Ä™dÃ³w blokujÄ…cych (Severity 1).
+- Pokrycie kluczowych serwisÃ³w testami jednostkowymi min. 70%.
 
-## 9. Role i odpowiedzialnoœci
-- **QA Engineer**: przygotowanie planu, przypadków testowych, wykonanie testów.
-- **Developerzy**: wsparcie w diagnozie b³êdów i poprawki.
-- **Product Owner**: akceptacja kryteriów gotowoœci.
+## 9. Role i odpowiedzialnoÅ›ci
+- **QA Engineer**: przygotowanie planu, przypadkÃ³w testowych, wykonanie testÃ³w.
+- **Developerzy**: wsparcie w diagnozie bÅ‚Ä™dÃ³w i poprawki.
+- **Product Owner**: akceptacja kryteriÃ³w gotowoÅ›ci.
 
-## 10. Procedury raportowania b³êdów
-- Ka¿dy b³¹d zg³aszany w systemie œledzenia (np. GitHub Issues).
+## 10. Procedury raportowania bÅ‚Ä™dÃ³w
+- KaÅ¼dy bÅ‚Ä…d zgÅ‚aszany w systemie Å›ledzenia (np. GitHub Issues).
 - Minimalny zestaw informacji:
   - kroki reprodukcji,
   - oczekiwany vs rzeczywisty rezultat,
-  - œrodowisko,
+  - Å›rodowisko,
   - zrzuty ekranu/logi.
-- Priorytetyzacja: P1 (blokuj¹ce), P2 (istotne), P3 (kosmetyczne).
+- Priorytetyzacja: P1 (blokujÄ…ce), P2 (istotne), P3 (kosmetyczne).
+
+## 11. Najbardziej wartoÅ›ciowe do testÃ³w jednostkowych sÄ… elementy logiki domenowej i walidacji, niezaleÅ¼ne od UI:
+â€¢	DecksApiClient i FlashcardsApiClient â€“ walidacje wejÅ›cia, budowanie zapytaÅ„, mapowanie bÅ‚Ä™dÃ³w HTTP na wyjÄ…tki; Å‚atwe do izolacji przez mock httpClient.
+â€¢	SupabaseAuthService â€“ mapowanie bÅ‚Ä™dÃ³w logowania, obsÅ‚uga sesji i stanÃ³w uÅ¼ytkownika.
+â€¢	FlashcardGenerationService â€“ walidacje Å¼Ä…dania i mapowanie bÅ‚Ä™dÃ³w wywoÅ‚ania funkcji.
+â€¢	OpenRouterService â€“ walidacja requestu, retry/backoff, obsÅ‚uga bÅ‚Ä™dÃ³w i time-outÃ³w.
+â€¢	UserSessionState â€“ logika stanu sesji (np. SetAuthenticated(string?), ClearSession(), UpdateFromSupabase(Supabase.Client)).
+Te elementy majÄ… deterministycznÄ… logikÄ™, wiÄ™c unit testy szybko wykrywajÄ… regresje bez uruchamiania UI lub zaleÅ¼noÅ›ci zewnÄ™trznych.
+
 
 </plan_testow>
